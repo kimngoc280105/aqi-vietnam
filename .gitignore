@@ -1,6 +1,6 @@
 # Data
-data/raw/
-data/processed/
+# data/raw/
+# data/processed/
 
 # Cache
 .aq_cache*
