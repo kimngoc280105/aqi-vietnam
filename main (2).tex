@@ -1,0 +1,577 @@
+\documentclass[12pt,a4paper]{article}
+
+% ============================================================
+% PACKAGES
+% ============================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+% ============================================================
+% THIẾT LẬP
+% ============================================================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Nhóm 11 --- Báo cáo Dữ liệu}
+\lhead{Môn Nhập môn Học máy}
+\rfoot{\thepage}
+
+% ============================================================
+% BẮT ĐẦU TÀI LIỆU
+% ============================================================
+\begin{document}
+
+% ── TRANG BÌA ──────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    {\Large \textbf{ĐẠI HỌC KHOA HỌC TỰ NHIÊN TP.HCM}}\\[0.3cm]
+    {\large Khoa Công nghệ Thông tin}\\[2cm]
+
+    {\Huge \textbf{BÁO CÁO VỀ DỮ LIỆU}}\\[0.5cm]
+    {\large Xây dựng và Triển khai Hệ thống Học máy Ứng dụng}\\[2cm]
+
+    {\LARGE \textbf{Dự đoán Chất lượng Không khí Việt Nam}}\\[0.3cm]
+    {\large và Cảnh báo Nguy cơ Mắc Bệnh Hô hấp}\\[2cm]
+
+    \begin{tabular}{cll}
+        \toprule
+        \textbf{STT} & \textbf{MSSV} & \textbf{Họ và tên} \\
+        \midrule
+        1 & 23120062 & Trần Kim Ngọc \\
+        2 & 23120063 & Nguyễn Thành Nguyên \\
+        3 & 23120084 & Nguyễn Mạnh Thắng \\
+        4 & 23120059 & Trần Đình Luân \\
+        5 & 23120064 & Nguyễn Thiện Nhân \\
+        \bottomrule
+    \end{tabular}\\[2cm]
+
+    {\large Nhóm 11}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+% 1. GIỚI THIỆU BÀI TOÁN
+% ============================================================
+\section{Giới thiệu bài toán}
+
+Ô nhiễm không khí đang là vấn đề nghiêm trọng tại các đô thị lớn của Việt Nam như
+Hà Nội, TP.HCM và Đà Nẵng, ảnh hưởng trực tiếp đến sức khỏe hàng triệu người dân
+mỗi ngày. Chỉ số AQI (\textit{Air Quality Index}) tại nhiều khu vực thường xuyên vượt
+ngưỡng an toàn, đặc biệt vào mùa khô. Tuy nhiên, người dân hiện vẫn thiếu một công
+cụ dự đoán sớm và cảnh báo kịp thời bằng tiếng Việt, phù hợp với đặc thù khí hậu
+và địa lý Việt Nam.
+
+Nhóm hướng đến giải quyết hai bài toán học máy:
+\begin{itemize}
+    \item \textbf{Hồi quy:} Dự đoán giá trị AQI cụ thể trong 24--48 giờ tới dựa trên
+    dữ liệu lịch sử và điều kiện khí tượng.
+    \item \textbf{Phân loại:} Xác định mức chất lượng không khí theo 6 cấp độ:
+    Tốt / Trung bình / Kém / Xấu / Rất xấu / Nguy hại, từ đó đưa ra cảnh báo
+    sức khỏe phù hợp với từng nhóm đối tượng.
+\end{itemize}
+
+% ============================================================
+% 2. PHƯƠNG PHÁP VÀ NGUỒN THU THẬP DỮ LIỆU
+% ============================================================
+\section{Phương pháp và nguồn thu thập dữ liệu}
+
+\subsection{Nguồn dữ liệu}
+
+Dữ liệu được thu thập từ API công khai, không sử dụng dataset tải sẵn, không
+web scraping nội dung HTML và không thu thập bằng khảo sát/biểu mẫu. Nhóm tự
+thu thập dữ liệu theo giờ cho ba thành phố, sau đó mở rộng bộ dữ liệu bằng cách
+ghép dữ liệu chất lượng không khí với dữ liệu khí tượng và tạo thêm các thuộc
+tính thời gian, lag và rolling mean.
+
+\begin{table}[H]
+    \centering
+    \caption{Đối chiếu yêu cầu nguồn dữ liệu}
+    \begin{tabularx}{\textwidth}{lX}
+        \toprule
+        \textbf{Hạng mục} & \textbf{Cách thực hiện trong đề tài} \\
+        \midrule
+        Dataset có sẵn & Không dùng dataset tải sẵn; nhóm tự gọi API để thu thập dữ liệu. \\
+        Mở rộng dữ liệu & Có: merge Air Quality + Weather, tạo biến thời gian, mùa, lag và rolling mean. \\
+        API & Có: sử dụng Open-Meteo Air Quality API và Open-Meteo Historical Weather API. \\
+        Web scraping & Không; không crawl HTML, chỉ gọi API có cấu trúc. \\
+        Khảo sát/biểu mẫu & Không dùng Google Form, Survey hay dữ liệu tự khai báo. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Nguồn API sử dụng}
+    \begin{tabularx}{\textwidth}{llX}
+        \toprule
+        \textbf{Nguồn} & \textbf{Loại} & \textbf{Nội dung} \\
+        \midrule
+        Open-Meteo Air Quality API &
+            API miễn phí, không cần key &
+            PM2.5, PM10, O3, NO2, SO2, CO, AQI (US \& EU) theo giờ. \\[0.25cm]
+        Open-Meteo Historical Weather API &
+            API miễn phí, không cần key &
+            Nhiệt độ, độ ẩm, tốc độ gió, hướng gió, lượng mưa, áp suất, độ che phủ mây theo giờ. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Phạm vi dữ liệu thực tế trong file \texttt{all\_cities.csv}: 98{,}187 mẫu,
+34 thuộc tính, từ \textbf{2022-08-05 07:00:00} đến
+\textbf{2026-04-29 23:00:00} cho \textbf{Hà Nội}, \textbf{TP.HCM} và
+\textbf{Đà Nẵng}.
+
+\subsection{Phương pháp thu thập}
+
+\textbf{Quy trình thực hiện:}
+\begin{enumerate}
+    \item Gọi Open-Meteo Air Quality API với tọa độ từng thành phố, khoảng thời
+    gian và timezone \texttt{Asia/Ho\_Chi\_Minh}; thu thập 8 biến theo giờ:
+    PM2.5, PM10, O3, NO2, SO2, CO, EU AQI và US AQI.
+    \item Gọi Open-Meteo Historical Weather API cho cùng tọa độ và khoảng thời
+    gian; thu thập 7 biến khí tượng gồm nhiệt độ, độ ẩm, tốc độ gió, hướng gió,
+    lượng mưa, áp suất và độ che phủ mây.
+    \item Loại bỏ các dòng thiếu \texttt{pm25} hoặc \texttt{aqi} ngay tại bước
+    thu thập dữ liệu chất lượng không khí.
+    \item Lưu dữ liệu thô riêng theo nguồn và thành phố trong thư mục
+    \texttt{data/raw/}.
+    \item Merge hai nguồn theo cột \texttt{datetime} bằng
+    \texttt{pd.merge(..., how='inner')}.
+    \item Thực hiện feature engineering: tạo biến thời gian, mùa, lag features,
+    rolling features và nhãn \texttt{aqi\_category}.
+    \item Lưu dữ liệu đã xử lý cho từng thành phố và file hợp nhất
+    \texttt{data/processed/all\_cities.csv}.
+\end{enumerate}
+
+\textbf{Công cụ sử dụng:}
+\begin{itemize}
+    \item Python 3.x với các thư viện: \texttt{pandas}, \texttt{openmeteo-requests},
+    \texttt{requests-cache}, \texttt{retry-requests}
+    \item Dữ liệu được cache cục bộ để tránh gọi API lặp lại
+\end{itemize}
+
+\textbf{Định dạng lưu trữ:}
+\begin{itemize}
+    \item File dữ liệu được lưu ở định dạng CSV.
+    \item Encoding sử dụng \texttt{utf-8-sig} để hỗ trợ tiếng Việt có dấu.
+    \item Dữ liệu có tần suất theo giờ và dùng múi giờ \texttt{Asia/Ho\_Chi\_Minh}.
+\end{itemize}
+
+% ============================================================
+% 3. QUY TRÌNH LÀM SẠCH VÀ TIỀN XỬ LÝ
+% ============================================================
+\section{Quy trình làm sạch và tiền xử lý dữ liệu}
+
+\subsection{Loại bỏ nhiễu, trùng lặp và dữ liệu thiếu}
+
+Nhóm kiểm tra toàn bộ file \texttt{all\_cities.csv} và ghi nhận:
+\begin{itemize}
+    \item \textbf{Trùng lặp:} 0 dòng trùng lặp theo kiểm tra
+    \texttt{df.duplicated().sum()}.
+    \item \textbf{Dữ liệu bất hợp lý:} cột \texttt{o3} có 13 giá trị âm. Vì nồng
+    độ ozone không thể âm về mặt vật lý, các giá trị này được chuyển thành
+    \texttt{NaN} trước khi xử lý missing values.
+    \item \textbf{Dữ liệu thiếu ban đầu:} các cột lag có missing ở đầu chuỗi thời
+    gian của từng thành phố: \texttt{pm25\_lag\_1h} có 3 giá trị thiếu,
+    \texttt{pm25\_lag\_3h} có 9, \texttt{pm25\_lag\_6h} có 18,
+    \texttt{pm25\_lag\_12h} có 36 và \texttt{pm25\_lag\_24h} có 72.
+\end{itemize}
+
+Tỷ lệ missing tối đa trước xử lý chỉ khoảng 0.073\% ở cột
+\texttt{pm25\_lag\_24h}. Nhóm sử dụng Linear Interpolation kết hợp Forward Fill
+và Backward Fill theo từng thành phố để tránh nội suy sai giữa các chuỗi thời
+gian không liên quan:
+
+\begin{lstlisting}[language=Python]
+df = df.sort_values(["city", "datetime"]).reset_index(drop=True)
+numeric_cols = df.select_dtypes(include="number").columns
+df[numeric_cols] = df.groupby("city")[numeric_cols].transform(
+    lambda x: x.interpolate(method="linear")
+)
+df[numeric_cols] = df.groupby("city")[numeric_cols].transform(lambda x: x.ffill())
+df[numeric_cols] = df.groupby("city")[numeric_cols].transform(lambda x: x.bfill())
+\end{lstlisting}
+
+Sau bước xử lý, toàn bộ dataset còn 0 giá trị thiếu.
+
+\subsection{Chuẩn hoá và biến đổi}
+
+Các biến phân loại đầu vào như \texttt{city} và \texttt{season} được biến đổi
+bằng one-hot encoding. Biến mục tiêu phân loại \texttt{aqi\_category} được ánh xạ
+từ nhãn tiếng Việt sang số:
+
+\begin{table}[H]
+    \centering
+    \caption{Ánh xạ nhãn AQI cho bài toán phân loại}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Nhãn} & \textbf{Mã hóa} \\
+        \midrule
+        Tốt & 0 \\
+        Trung bình & 1 \\
+        Kém & 2 \\
+        Xấu & 3 \\
+        Rất xấu & 4 \\
+        Nguy hại & 5 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Đối với các biến số, nhóm sử dụng \texttt{StandardScaler} để chuẩn hóa về trung
+bình 0 và độ lệch chuẩn 1. Scaler chỉ được fit trên tập train, sau đó dùng cùng
+tham số để transform validation/test nhằm tránh data leakage. Vì dữ liệu có tính
+chuỗi thời gian, quá trình chia train/validation/test được thực hiện theo các
+mốc \texttt{datetime} duy nhất: 70\% thời gian đầu cho train, 15\% tiếp theo cho
+validation và 15\% cuối cho test.
+
+\subsection{Chuyển đổi kiểu dữ liệu}
+
+Cột \texttt{datetime} được chuyển sang kiểu \texttt{datetime64} và sử dụng
+múi giờ \texttt{Asia/Ho\_Chi\_Minh} (UTC+7) nhất quán cho cả hai nguồn.
+Các biến nồng độ ô nhiễm và khí tượng được giữ ở kiểu số thực
+(\texttt{float64}); các biến thời gian rời rạc như \texttt{year},
+\texttt{month}, \texttt{day}, \texttt{hour}, \texttt{day\_of\_week} và
+\texttt{is\_weekend} ở kiểu số nguyên; các biến phân loại
+\texttt{city}, \texttt{season}, \texttt{aqi\_category} ở dạng chuỗi.
+
+\subsection{Kiểm tra sự nhất quán}
+
+Hai nguồn được merge bằng \texttt{inner join} trên cột \texttt{datetime},
+đảm bảo mọi dòng trong dataset cuối đều có đủ cả thông tin ô nhiễm lẫn khí tượng.
+Nhóm cũng kiểm tra phạm vi hợp lý của từng biến: nồng độ ô nhiễm không âm,
+\texttt{humidity} nằm trong [0, 100], \texttt{hour} nằm trong [0, 23],
+\texttt{month} nằm trong [1, 12] và các giá trị của \texttt{city},
+\texttt{season}, \texttt{aqi\_category} thuộc tập nhãn hợp lệ.
+
+\subsection{Đảm bảo chất lượng dữ liệu}
+
+\begin{table}[H]
+    \centering
+    \caption{Tiêu chí đánh giá dữ liệu tốt cho học máy}
+    \begin{tabularx}{\textwidth}{lXl}
+        \toprule
+        \textbf{Tiêu chí} & \textbf{Ngưỡng/Quy tắc đánh giá} & \textbf{Kết quả} \\
+        \midrule
+        Missing values & Sau xử lý còn 0 giá trị thiếu & Đạt \\
+        Trùng lặp & 0 dòng trùng lặp & Đạt \\
+        Kiểu dữ liệu & Đúng kiểu cho datetime, numeric và categorical & Đạt \\
+        Phạm vi giá trị & Không còn O3 âm; các biến nằm trong khoảng hợp lý & Đạt \\
+        Ngoại lệ & Phát hiện bằng IQR/boxplot, không xóa tự động nếu có ý nghĩa thực tế & Theo dõi \\
+        Phân bố nhãn & Lớp nhỏ nhất cần được ghi nhận nếu dưới 5\% & Cần lưu ý \\
+        Số lượng mẫu & Lớn hơn 10{,}000 mẫu & Đạt \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\textbf{Kiểm tra tự động:} sử dụng code để kiểm tra missing values, duplicates,
+kiểu dữ liệu, phạm vi giá trị, phân bố nhãn, tương quan và các cặp biến có tương
+quan cao.
+
+\textbf{Kiểm tra thủ công:} quan sát \texttt{df.head()}, đối chiếu ý nghĩa vật
+lý của từng biến, đọc biểu đồ phân bố/boxplot và quyết định giữ hay xử lý ngoại
+lệ. Các outlier PM2.5 được giữ lại vì phản ánh những thời điểm ô nhiễm cao có ý
+nghĩa đối với bài toán cảnh báo.
+
+% ============================================================
+% 4. LƯU TRỮ VÀ QUẢN LÝ DỮ LIỆU
+% ============================================================
+\section{Lưu trữ và quản lý dữ liệu}
+
+Dữ liệu được tổ chức theo nguyên tắc tách riêng dữ liệu thô và dữ liệu đã xử lý
+để dễ kiểm tra, tái lập và mở rộng.
+
+\begin{lstlisting}
+data/
+  raw/
+    airquality_hanoi.csv
+    airquality_hochiminh.csv
+    airquality_danang.csv
+    weather_hanoi.csv
+    weather_hochiminh.csv
+    weather_danang.csv
+  processed/
+    merged_hanoi.csv
+    merged_hochiminh.csv
+    merged_danang.csv
+    all_cities.csv
+\end{lstlisting}
+
+\begin{table}[H]
+    \centering
+    \caption{Vai trò của các thư mục dữ liệu}
+    \begin{tabularx}{\textwidth}{lX}
+        \toprule
+        \textbf{Thư mục/File} & \textbf{Vai trò} \\
+        \midrule
+        \texttt{data/raw/} & Lưu dữ liệu lấy trực tiếp từ API, tách theo nguồn và thành phố để đối chiếu khi cần. \\
+        \texttt{merged\_<city>.csv} & Dữ liệu Air Quality và Weather đã merge theo \texttt{datetime} cho từng thành phố. \\
+        \texttt{all\_cities.csv} & File hợp nhất cuối cùng dùng cho EDA và huấn luyện mô hình. \\
+        Cache API & Cache cục bộ giúp tái chạy script nhanh hơn và hạn chế gọi API lặp lại. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Cách đặt tên file thống nhất theo mẫu \texttt{<nguồn>\_<city>.csv} và
+\texttt{merged\_<city>.csv}, giúp truy vết được dữ liệu đến từ nguồn nào, thành
+phố nào và đang ở giai đoạn thô hay đã xử lý. Mã nguồn crawl được quản lý trong
+repo; các file dữ liệu lớn có thể được quản lý riêng hoặc cấu hình trong
+\texttt{.gitignore} tùy yêu cầu nộp bài.
+
+% ============================================================
+% 5. PHÂN TÍCH KHÁM PHÁ DỮ LIỆU (EDA)
+% ============================================================
+\section{Phân tích khám phá dữ liệu (EDA)}
+
+\subsection{Thống kê mô tả}
+
+Dataset cuối cùng có 98{,}187 mẫu và 34 thuộc tính. Trước bước imputation, tổng
+số ô thiếu là 138 trên 3{,}338{,}358 ô dữ liệu, tương ứng khoảng 0.0041\%.
+Sau bước làm sạch và tiền xử lý, số giá trị thiếu còn lại là 0.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Thống kê mô tả các biến số chính sau làm sạch}
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        \textbf{Biến} & \textbf{Mean} & \textbf{Median} & \textbf{Variance} &
+        \textbf{Min} & \textbf{Max} & \textbf{IQR} \\
+        \midrule
+        \texttt{pm25} & 30.095 & 23.900 & 478.194 & 0.300 & 232.800 & 20.800 \\
+        \texttt{pm10} & 39.606 & 32.800 & 700.860 & 0.400 & 291.500 & 26.250 \\
+        \texttt{o3} & 78.262 & 70.000 & 2926.963 & 0.000 & 418.000 & 70.000 \\
+        \texttt{no2} & 21.375 & 15.200 & 386.121 & 0.000 & 170.350 & 25.150 \\
+        \texttt{so2} & 17.249 & 14.800 & 195.003 & 0.000 & 104.600 & 19.800 \\
+        \texttt{co} & 565.584 & 449.000 & 181836.408 & 59.000 & 5784.000 & 367.000 \\
+        \texttt{temp} & 25.967 & 26.150 & 19.471 & 6.500 & 41.150 & 4.750 \\
+        \texttt{humidity} & 79.664 & 83.098 & 201.776 & 21.568 & 100.000 & 19.505 \\
+        \texttt{wind\_speed} & 8.864 & 7.989 & 26.360 & 0.000 & 60.716 & 6.674 \\
+        \texttt{precip} & 0.266 & 0.000 & 1.206 & 0.000 & 41.900 & 0.100 \\
+        \texttt{pressure} & 1009.544 & 1008.823 & 30.963 & 982.728 & 1033.360 & 6.871 \\
+        \texttt{aqi} & 93.506 & 83.078 & 1588.652 & 12.059 & 284.492 & 51.536 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Phân bố dữ liệu theo từng thuộc tính}
+
+Các biến ô nhiễm như \texttt{pm25}, \texttt{pm10}, \texttt{co} và
+\texttt{precip} có phân phối lệch phải, cho thấy phần lớn thời điểm có giá trị
+thấp/trung bình nhưng vẫn tồn tại các đợt tăng mạnh. Bảng dưới đây tóm tắt độ
+lệch phân phối của một số biến chính:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/feature_distributions.png}
+    \caption{Phân bố các thuộc tính số chính}
+    \label{fig:feature-distributions}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Skewness của các biến số chính}
+    \begin{tabular}{lr}
+        \toprule
+        \textbf{Biến} & \textbf{Skewness} \\
+        \midrule
+        \texttt{precip} & 9.459 \\
+        \texttt{co} & 3.049 \\
+        \texttt{pm25} & 2.256 \\
+        \texttt{pm10} & 2.102 \\
+        \texttt{no2} & 1.503 \\
+        \texttt{wind\_speed} & 1.134 \\
+        \texttt{o3} & 1.113 \\
+        \texttt{aqi} & 0.987 \\
+        \texttt{humidity} & -0.971 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Biến phân loại \texttt{city} được phân bố cân bằng theo ba thành phố, mỗi thành
+phố có 32{,}729 mẫu, tương đương 33.3\% dữ liệu.
+
+\subsection{Phân tích phân bố nhãn}
+
+Hình \ref{fig:aqi-distribution} mô tả phân bố biến mục tiêu hồi quy \texttt{aqi}
+và biến mục tiêu phân loại \texttt{aqi\_category}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/aqi_distribution.png}
+    \caption{Phân bố AQI và nhãn AQI Category}
+    \label{fig:aqi-distribution}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Tỉ lệ phần trăm của từng lớp AQI}
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Lớp AQI} & \textbf{Số mẫu} & \textbf{Tỉ lệ (\%)} \\
+        \midrule
+        Trung bình & 57{,}990 & 59.06 \\
+        Kém & 20{,}590 & 20.97 \\
+        Xấu & 11{,}174 & 11.38 \\
+        Tốt & 6{,}669 & 6.79 \\
+        Rất xấu & 1{,}764 & 1.80 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Dữ liệu bị mất cân bằng nhãn: lớp \textit{Trung bình} chiếm khoảng 59.06\%,
+trong khi lớp \textit{Rất xấu} chỉ chiếm 1.80\%. Vì vậy, khi huấn luyện mô hình
+phân loại, nhóm cần cân nhắc class weights, resampling hoặc đánh giá bằng
+macro-F1 thay vì chỉ sử dụng accuracy.
+
+\subsection{Phân tích mối quan hệ giữa các thuộc tính}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/correlation_heatmap.png}
+    \caption{Ma trận tương quan giữa các biến}
+    \label{fig:corr-heatmap}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Tương quan của các biến chính với AQI}
+    \begin{tabular}{lr}
+        \toprule
+        \textbf{Biến} & \textbf{Tương quan với AQI} \\
+        \midrule
+        \texttt{pm25} & 0.625 \\
+        \texttt{pm10} & 0.589 \\
+        \texttt{so2} & 0.400 \\
+        \texttt{co} & 0.340 \\
+        \texttt{no2} & 0.276 \\
+        \texttt{o3} & 0.251 \\
+        \texttt{wind\_speed} & -0.132 \\
+        \texttt{pressure} & -0.115 \\
+        \texttt{humidity} & -0.076 \\
+        \texttt{precip} & -0.058 \\
+        \texttt{temp} & 0.007 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Các biến có ý nghĩa nhất với bài toán dự đoán AQI là \texttt{pm25},
+\texttt{pm10}, \texttt{so2}, \texttt{co}, \texttt{no2} và \texttt{o3}. Trong đó
+\texttt{pm25} và \texttt{pm10} có tương quan cao với AQI, phù hợp với bản chất
+của chỉ số chất lượng không khí.
+
+Hiện tượng đa cộng tuyến được phát hiện ở cặp \texttt{pm25} và \texttt{pm10}
+với hệ số tương quan khoảng 0.952. Nếu sử dụng mô hình tuyến tính, nhóm cần cân
+nhắc regularization như Ridge/Lasso hoặc kiểm tra loại bớt một biến; với các mô
+hình cây, ảnh hưởng của đa cộng tuyến thường ít nghiêm trọng hơn.
+
+\subsection{Kiểm tra chất lượng dữ liệu}
+
+Hình \ref{fig:boxplot-outliers} sử dụng boxplot để phát hiện ngoại lệ ở các biến
+ô nhiễm.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/boxplot_outliers.png}
+    \caption{Phát hiện ngoại lệ bằng boxplot}
+    \label{fig:boxplot-outliers}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Outlier theo quy tắc IQR}
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Biến} & \textbf{Số outlier} & \textbf{Tỉ lệ (\%)} \\
+        \midrule
+        \texttt{pm25} & 6{,}089 & 6.201 \\
+        \texttt{pm10} & 5{,}705 & 5.810 \\
+        \texttt{o3} & 2{,}429 & 2.474 \\
+        \texttt{no2} & 2{,}901 & 2.955 \\
+        \texttt{so2} & 1{,}718 & 1.750 \\
+        \texttt{co} & 6{,}281 & 6.397 \\
+        \texttt{aqi} & 2{,}114 & 2.153 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Kiểm tra dữ liệu không hợp lệ sau làm sạch}
+    \begin{tabular}{lr}
+        \toprule
+        \textbf{Kiểm tra} & \textbf{Số lượng} \\
+        \midrule
+        O3 âm & 0 \\
+        Độ ẩm ngoài [0, 100] & 0 \\
+        Giờ ngoài [0, 23] & 0 \\
+        Dòng trùng lặp & 0 \\
+        Giá trị thiếu & 0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Các outlier không bị xóa tự động vì nhiều điểm phản ánh các đợt ô nhiễm thật,
+đặc biệt quan trọng cho mục tiêu cảnh báo sức khỏe. Kế hoạch xử lý là giữ lại
+outlier, theo dõi ảnh hưởng trong quá trình huấn luyện và cân nhắc robust
+scaling/log transform nếu dùng mô hình tuyến tính nhạy với ngoại lệ.
+
+\subsection{EDA cho dữ liệu phi cấu trúc}
+
+Bộ dữ liệu của đề tài là dữ liệu có cấu trúc dạng bảng CSV, gồm biến thời gian,
+biến số và biến phân loại. Dataset không chứa ảnh, văn bản tự do hoặc âm thanh,
+nên các bước EDA phi cấu trúc không áp dụng trực tiếp.
+
+\begin{table}[H]
+    \centering
+    \caption{Đánh giá yêu cầu EDA cho dữ liệu phi cấu trúc}
+    \begin{tabularx}{\textwidth}{lX}
+        \toprule
+        \textbf{Loại dữ liệu} & \textbf{Kết luận} \\
+        \midrule
+        Ảnh & Không áp dụng vì dataset không có file ảnh, độ phân giải, độ sáng/tối hoặc đối tượng trong ảnh. \\
+        Văn bản & Không áp dụng vì không có câu/tài liệu tự do; các cột như \texttt{city}, \texttt{season}, \texttt{aqi\_category} là biến phân loại có cấu trúc. \\
+        Âm thanh & Không áp dụng vì không có tín hiệu âm thanh để phân tích phổ. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Nếu đề tài mở rộng thêm dữ liệu camera giao thông, tin tức, bài đăng mạng xã hội
+hoặc âm thanh môi trường, nhóm sẽ bổ sung các thống kê tương ứng như độ phân
+giải ảnh, độ dài văn bản, tần suất từ khóa, tỷ lệ nhiễu/ký tự đặc biệt hoặc phổ
+âm thanh.
+
+% ============================================================
+% KẾT THÚC
+% ============================================================
+\end{document}
