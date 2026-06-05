@@ -1,33 +1,23 @@
 """
 Crawl dữ liệu AQI Việt Nam - Hà Nội, TP.HCM, Đà Nẵng
+Tích hợp: Khí tượng (Open-Meteo) & Dữ liệu không gian Nhà máy (OpenStreetMap)
 =======================================================
-Nguồn:
-  - Open-Meteo Air Quality API : PM2.5, PM10, O3, NO2, SO2, CO, AQI (từ 2022-07-29)
-  - Open-Meteo Archive API     : Khí tượng theo giờ (nhiệt độ, độ ẩm, gió, mưa)
-
-Cài thư viện:
-    pip install pandas openmeteo-requests requests-cache retry-requests
-
-Output:
-    data/raw/airquality_<city>.csv
-    data/raw/weather_<city>.csv
-    data/processed/merged_<city>.csv
-    data/processed/all_cities.csv   ← dùng file này để train model
 """
 
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
+import requests
 
 import openmeteo_requests
-import requests_cache
 from retry_requests import retry
 
 # ============================================================
 # CẤU HÌNH
 # ============================================================
 START_DATE = "2022-08-01"
-END_DATE   = datetime.today().strftime("%Y-%m-%d")
+END_DATE   = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
 
 CITIES = {
     "hanoi"     : {"label": "Hà Nội",  "lat": 21.0245, "lon": 105.8412},
@@ -35,13 +25,16 @@ CITIES = {
     "danang"    : {"label": "Đà Nẵng", "lat": 16.0544, "lon": 108.2022},
 }
 
+# Các mốc bán kính (mét) để quét số lượng nhà máy xung quanh tọa độ
+FACTORY_RADII = [2000, 5000, 10000] 
+
 os.makedirs("data/raw",       exist_ok=True)
 os.makedirs("data/processed", exist_ok=True)
 
 
-def get_om_client(cache_name: str):
-    cache   = requests_cache.CachedSession(cache_name, expire_after=-1)
-    session = retry(cache, retries=5, backoff_factor=0.3)
+# [ĐÃ SỬA LỖI 1]: Dùng requests.Session() bình thường, bỏ cache để tránh lỗi database
+def get_om_client():
+    session = retry(requests.Session(), retries=5, backoff_factor=0.3)
     return openmeteo_requests.Client(session=session)
 
 
@@ -50,7 +43,7 @@ def get_om_client(cache_name: str):
 # ============================================================
 def crawl_air_quality(city_key: str, cfg: dict) -> pd.DataFrame:
     print(f"\n🌫  Air Quality — {cfg['label']}")
-    om = get_om_client(".aq_cache")
+    om = get_om_client()
 
     resp = om.weather_api(
         "https://air-quality-api.open-meteo.com/v1/air-quality",
@@ -98,7 +91,7 @@ def crawl_air_quality(city_key: str, cfg: dict) -> pd.DataFrame:
 # ============================================================
 def crawl_weather(city_key: str, cfg: dict) -> pd.DataFrame:
     print(f"\n🌤  Weather — {cfg['label']}")
-    om = get_om_client(".weather_cache")
+    om = get_om_client()
 
     resp = om.weather_api(
         "https://archive-api.open-meteo.com/v1/archive",
@@ -137,18 +130,61 @@ def crawl_weather(city_key: str, cfg: dict) -> pd.DataFrame:
     print(f"  ✅ {len(df):,} giờ | 💾 {path}")
     return df
 
+# ============================================================
+# CRAWL DỮ LIỆU KHÔNG GIAN (NHÀ MÁY) - OVERPASS API
+# ============================================================
+# ============================================================
+# CRAWL DỮ LIỆU KHÔNG GIAN (NHÀ MÁY) - OVERPASS API (ĐÃ NÂNG CẤP)
+# ============================================================
+def get_factories_count(lat: float, lon: float, radius: int) -> int:
+    overpass_url = "http://overpass-api.de/api/interpreter"
+    
+    # [NÂNG CẤP 1]: Thêm [timeout:50] vào Overpass QL để xin thêm thời gian xử lý
+    query = f"""
+    [out:json][timeout:50];
+    (
+      node["landuse"="industrial"](around:{radius},{lat},{lon});
+      way["landuse"="industrial"](around:{radius},{lat},{lon});
+      relation["landuse"="industrial"](around:{radius},{lat},{lon});
+      
+      node["man_made"="works"](around:{radius},{lat},{lon});
+      way["man_made"="works"](around:{radius},{lat},{lon});
+      relation["man_made"="works"](around:{radius},{lat},{lon});
+    );
+    out count;
+    """
+    
+    headers = {
+        'User-Agent': 'Vietnam-AQI-ML-Project/1.0 (Student Research)'
+    }
+    
+    # [NÂNG CẤP 2]: Thử gọi lại API tối đa 3 lần nếu bị Timeout
+    for attempt in range(3):
+        try:
+            # Thêm timeout=60 ở thư viện requests để tránh Python bỏ cuộc sớm
+            resp = requests.post(overpass_url, data={'data': query}, headers=headers, timeout=60)
+            resp.raise_for_status()
+            data = resp.json()
+            return int(data['elements'][0]['tags']['total'])
+        except Exception as e:
+            print(f"    ⚠️ Lỗi API (Lần thử {attempt + 1}/3): {e}")
+            time.sleep(3) # Nghỉ 3 giây trước khi thử lại
+            
+    return 0 # Nếu thử 3 lần vẫn thất bại thì đành trả về 0
 
 # ============================================================
 # MERGE + FEATURE ENGINEERING
 # ============================================================
-def merge_and_fe(city_key: str, df_aq: pd.DataFrame, df_weather: pd.DataFrame) -> pd.DataFrame:
+def merge_and_fe(city_key: str, df_aq: pd.DataFrame, df_weather: pd.DataFrame, spatial_features: dict) -> pd.DataFrame:
     label = CITIES[city_key]["label"]
 
     df = pd.merge(df_aq, df_weather.drop(columns=["city"]), on="datetime", how="inner")
     df["city"] = label
     df = df.sort_values("datetime").reset_index(drop=True)
 
-    # Thời gian
+    for feature_name, value in spatial_features.items():
+        df[feature_name] = value
+
     df["year"]        = df["datetime"].dt.year
     df["month"]       = df["datetime"].dt.month
     df["day"]         = df["datetime"].dt.day
@@ -157,7 +193,6 @@ def merge_and_fe(city_key: str, df_aq: pd.DataFrame, df_weather: pd.DataFrame) -
     df["is_weekend"]  = df["day_of_week"].isin([5, 6]).astype(int)
     df["day_of_year"] = df["datetime"].dt.dayofyear
 
-    # Mùa
     def get_season(month, city):
         if city == "Hà Nội":
             if month in [12, 1, 2]: return "Đông"
@@ -167,14 +202,12 @@ def merge_and_fe(city_key: str, df_aq: pd.DataFrame, df_weather: pd.DataFrame) -
         return "Khô" if month in [11, 12, 1, 2, 3, 4] else "Mưa"
     df["season"] = df.apply(lambda r: get_season(r["month"], r["city"]), axis=1)
 
-    # Lag + Rolling PM2.5
     for lag in [1, 3, 6, 12, 24]:
         df[f"pm25_lag_{lag}h"] = df["pm25"].shift(lag)
     df["pm25_roll_6h"]  = df["pm25"].rolling(6,  min_periods=1).mean()
     df["pm25_roll_24h"] = df["pm25"].rolling(24, min_periods=1).mean()
     df["pm25_roll_72h"] = df["pm25"].rolling(72, min_periods=1).mean()
 
-    # Nhãn phân loại AQI
     def aqi_category(v):
         if pd.isna(v):  return None
         v = float(v)
@@ -194,7 +227,7 @@ def merge_and_fe(city_key: str, df_aq: pd.DataFrame, df_weather: pd.DataFrame) -
 # ============================================================
 if __name__ == "__main__":
     print("=" * 60)
-    print("🇻🇳 CRAWL DỮ LIỆU AQI VIỆT NAM")
+    print("🇻🇳 CRAWL DỮ LIỆU AQI VIỆT NAM (KÈM DỮ LIỆU NHÀ MÁY)")
     print(f"   Giai đoạn: {START_DATE} → {END_DATE}")
     print("=" * 60)
 
@@ -214,13 +247,26 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"  ❌ {e}")
 
-    print("\n── BƯỚC 3: Merge & Feature Engineering ──")
+    print("\n── BƯỚC 3: Dữ liệu Không gian (Nhà máy) ──")
+    city_spatial_features = {}
+    for ck, cfg in CITIES.items():
+        print(f"🏭 Đang đếm nhà máy xung quanh {cfg['label']}...")
+        city_spatial_features[ck] = {}
+        for r in FACTORY_RADII:
+            count = get_factories_count(cfg['lat'], cfg['lon'], r)
+            city_spatial_features[ck][f"factories_{r//1000}km"] = count
+            time.sleep(1.5)
+        print(f"  ✅ {city_spatial_features[ck]}")
+
+    print("\n── BƯỚC 4: Merge & Feature Engineering ──")
     merged = []
     for ck in CITIES:
         if ck not in aq_dfs or ck not in weather_dfs:
             print(f"  ⚠️  Thiếu data cho {ck}, bỏ qua")
             continue
-        df = merge_and_fe(ck, aq_dfs[ck], weather_dfs[ck])
+        
+        df = merge_and_fe(ck, aq_dfs[ck], weather_dfs[ck], city_spatial_features[ck])
+        
         path = f"data/processed/merged_{ck}.csv"
         df.to_csv(path, index=False, encoding="utf-8-sig")
         print(f"  💾 {path} | {len(df):,} dòng | {len(df.columns)} cột")
@@ -231,5 +277,5 @@ if __name__ == "__main__":
         df_all.to_csv("data/processed/all_cities.csv", index=False, encoding="utf-8-sig")
         print(f"\n🎉 all_cities.csv: {len(df_all):,} dòng")
         print(f"   Phân bố: {df_all['city'].value_counts().to_dict()}")
-        print(f"   Cột: {list(df_all.columns)}")
+        print(f"   Cột mới được thêm: {[c for c in df_all.columns if 'factories' in c]}")
         print("\n✅ XONG! Dùng data/processed/all_cities.csv để train model")
