@@ -1,0 +1,4 @@
+﻿model,train_rmse_ug_m3,val_rmse_ug_m3,test_rmse_ug_m3,diagnosis,evidence
+XGBoost,11.551893473550594,18.898450583661337,16.418476731412316,Có dấu hiệu overfitting,Validation RMSE cao hơn Train RMSE đáng kể.
+LSTM,16.692784603570896,24.63519309480729,20.89649681308456,Có dấu hiệu overfitting,Validation RMSE cao hơn Train RMSE đáng kể.
+SARIMAX,4.720369470875401,26.396830927792514,26.0295185835378,Có dấu hiệu overfitting,Validation RMSE cao hơn Train RMSE đáng kể.

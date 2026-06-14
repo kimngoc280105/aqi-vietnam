@@ -1,0 +1,2 @@
+﻿model,scope,train_rmse_ug_m3,val_rmse_ug_m3,test_rmse_ug_m3,test_mae_ug_m3,test_r2
+LSTM,All cities,16.692784603570896,24.63519309480729,20.89649681308456,12.561510911515258,0.265383407725467

@@ -1,0 +1,21 @@
+﻿city,datetime,target_time,actual_pm25,predicted_pm25,abs_error_ug_m3,actual_category,predicted_category,error_hypothesis
+Hà Nội,2026-04-24 06:00:00,2026-04-25 06:00:00,186.69999819993973,52.43801073133946,134.26198746860027,Very Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-04-05 12:00:00,2026-04-06 12:00:00,165.7999967813492,41.05133350491524,124.74866327643394,Very Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-12-11 00:00:00,2025-12-12 00:00:00,158.30000002980233,42.624316360056405,115.67568366974592,Very Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-04-23 00:00:00,2026-04-24 00:00:00,140.60000044703483,31.393890827894214,109.20610961914062,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-11-22 00:00:00,2025-11-23 00:00:00,143.00000182390212,34.7200756251812,108.27992619872091,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-03-11 00:00:00,2026-03-12 00:00:00,134.99999723434448,27.83739252537489,107.16260470896958,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-12-02 00:00:00,2025-12-03 00:00:00,144.39999960660936,39.72097557187081,104.67902403473855,Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-04-24 00:00:00,2026-04-25 00:00:00,144.39999960660936,43.95022514760495,100.4497744590044,Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-03-11 06:00:00,2026-03-12 06:00:00,129.9000018596649,29.74123715758324,100.15876470208167,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-10-17 00:00:00,2025-10-18 00:00:00,133.59999945163727,34.616461580991746,98.98353787064553,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-02-09 00:00:00,2026-02-10 00:00:00,117.299997651577,18.596678925305604,98.70331872627139,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-12-11 06:00:00,2025-12-12 06:00:00,143.00000182390212,44.74687288999558,98.25312893390654,Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-04-06 12:00:00,2026-04-07 12:00:00,154.60000243782997,56.519499140977864,98.0805032968521,Very Unhealthy,Unhealthy,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-01-12 00:00:00,2026-01-13 00:00:00,154.60000243782997,57.35056810677052,97.24943433105946,Very Unhealthy,Unhealthy,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-12-14 00:00:00,2025-12-15 00:00:00,115.30000254511833,20.2792714484036,95.02073109671474,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-01-12 06:00:00,2026-01-13 06:00:00,147.1000056862831,53.720512410998346,93.37949327528477,Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-01-08 00:00:00,2026-01-09 00:00:00,145.30000163316726,53.81791637837887,91.48208525478839,Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-12-28 00:00:00,2025-12-29 00:00:00,147.1000056862831,56.03438219726086,91.06562348902224,Unhealthy,Unhealthy,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2025-11-28 00:00:00,2025-11-29 00:00:00,122.90000086426735,32.9695769995451,89.93042386472226,Unhealthy,Moderate,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.
+Hà Nội,2026-04-05 18:00:00,2026-04-06 18:00:00,138.799996393919,49.57264021337033,89.22735618054867,Unhealthy,USG,Có xu hướng đánh giá thấp đỉnh ô nhiễm hoặc biến động bất thường.

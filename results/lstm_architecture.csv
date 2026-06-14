@@ -1,0 +1,8 @@
+﻿layer,type,output_shape,activation,params
+lstm,LSTM,"(None, 48, 64)",tanh / sigmoid gates,18176
+dropout,Dropout,"(None, 48, 64)",-,0
+lstm_1,LSTM,"(None, 32)",tanh / sigmoid gates,12416
+dropout_1,Dropout,"(None, 32)",-,0
+dense,Dense,"(None, 16)",relu,528
+dense_1,Dense,"(None, 24)",linear,408
+TOTAL,-,-,-,31528

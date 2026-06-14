@@ -99,7 +99,7 @@
 % ============================================================
 \section{Giới thiệu bài toán}
 
-Ô nhiễm môi trường không khí tại Việt Nam, đặc biệt là nồng độ bụi mịn $PM_{2.5}$ tại các đô thị lớn như Hà Nội, TP.HCM và Đà Nẵng đang là vấn đề lớn đe dọa đến sức khỏe cộng đồng. Nhóm hướng đến giải quyết bài toán có ý nghĩa thực tiễn cao: \textbf{Dự báo chuỗi nồng độ bụi mịn $PM_{2.5}$ trong không khí cho 24 giờ tới ($t+1$ đến $t+24$)} và \textbf{Phân loại mức độ nguy cơ sức khỏe cảnh báo sớm}. Việc dự báo trước 24 giờ là cực kỳ quan trọng đối với các nhóm đối tượng nhạy cảm như người mắc bệnh hô hấp mãn tính (hen suyễn, viêm phế quản, COPD) để họ có đủ thời gian chuẩn bị các biện pháp y tế và lập kế hoạch hoạt động an toàn trước một ngày.
+Ô nhiễm môi trường không khí tại Việt Nam, đặc biệt là nồng độ bụi mịn $PM_{2.5}$ tại các đô thị lớn như Hà Nội, TP.HCM và Đà Nẵng đang là vấn đề lớn đe dọa đến sức khỏe cộng đồng. Nhóm hướng đến giải quyết bài toán có ý nghĩa thực tiễn cao: \textbf{hồi quy chuỗi thời gian để dự báo trực tiếp nồng độ bụi mịn $PM_{2.5}$ trong không khí cho 24 giờ tới ($t+1$ đến $t+24$)}. Các mức cảnh báo sức khỏe và ma trận nhầm lẫn chỉ được xây dựng sau đó bằng cách ánh xạ giá trị $PM_{2.5}$ thực tế/dự báo sang các khoảng ngưỡng rủi ro. Việc dự báo trước 24 giờ là cực kỳ quan trọng đối với các nhóm đối tượng nhạy cảm như người mắc bệnh hô hấp mãn tính (hen suyễn, viêm phế quản, COPD) để họ có đủ thời gian chuẩn bị các biện pháp y tế và lập kế hoạch hoạt động an toàn trước một ngày.
 
 Trong các thiết kế ban đầu của hệ thống, chỉ số chất lượng không khí tổng hợp (AQI) được cân nhắc làm biến mục tiêu dự đoán. Tuy nhiên, qua phân tích khám phá dữ liệu (EDA), nhóm đã thực hiện bước chuyển đổi chiến lược (\textit{Target Pivot}) sang dự đoán trực tiếp nồng độ vật chất tuyệt đối $PM_{2.5}$ vì các lý do sau:
 \begin{enumerate}
@@ -156,7 +156,7 @@ Nhóm nghiên cứu và phát triển 3 lớp mô hình đại diện cho 3 trư
 
 \subsection{Kiến trúc cấu trúc của Mô hình Thống kê SARIMAX}
 
-Mô hình SARIMAX(1,1,1)(1,1,1,24) biểu diễn mối quan hệ tuyến tính động của nồng độ bụi mịn dưới dạng phương trình toán học:
+Mô hình SARIMAX(1,0,1)(1,0,0,24) biểu diễn mối quan hệ tuyến tính động của nồng độ bụi mịn dưới dạng phương trình toán học:
 \begin{equation}
     \Phi_1(L) \tilde{\Phi}_1(L^{24}) (1-L) (1-L^{24}) y_t = \Theta_1(L) \tilde{\Theta}_1(L^{24}) \varepsilon_t + \beta^T X_t
 \end{equation}
@@ -193,6 +193,13 @@ Trong đó:
     với $T_m$ là số nút lá của cây thứ $m$, $w_j$ là trọng số nút lá thứ $j$, $\gamma$ và $\lambda$ là các hệ số phạt nhằm kiểm soát độ phức tạp cấu trúc cây.
 \end{itemize}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/xgboost_feature_importance.png}
+    \caption{Top 15 đặc trưng quan trọng nhất của mô hình XGBoost trên bài toán dự báo $PM_{2.5}$ trước 24 giờ}
+    \label{fig:xgb-feature-importance}
+\end{figure}
+
 \subsection{Kiến trúc chi tiết của Mô hình Học sâu LSTM}
 
 Kiến trúc mạng LSTM được phát triển sử dụng phương pháp dự báo đa bước đầu ra vector (\textit{Vector-Output Multi-step Forecasting}), cho phép dự đoán đồng thời nồng độ bụi mịn cho cả 24 giờ tiếp theo:
@@ -212,23 +219,36 @@ Sơ đồ kiến trúc mạng LSTM chi tiết được mô tả trong Hình~\ref
 
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}[node distance=1.5cm, auto, >=stealth]
-        % Nodes
-        \node [layer] (input) {Input Layer \\ (48 $\times$ 6 features)};
-        \node [layer, below=of input] (lstm1) {LSTM Layer 1 \\ (64 units, return\_seq=True) \\ Param: 18,176};
-        \node [dropout, below=of lstm1] (drop1) {Dropout Layer 1 \\ (rate = 0.2)};
-        \node [layer, below=of drop1] (lstm2) {LSTM Layer 2 \\ (32 units, return\_seq=False) \\ Param: 12,416};
-        \node [dropout, below=of lstm2] (drop2) {Dropout Layer 2 \\ (rate = 0.2)};
-        \node [dense, below=of drop2] (dense1) {Dense Layer 1 \\ (16 units, ReLU) \\ Param: 528};
-        \node [dense, below=of dense1] (output) {Dense Output \\ (24 units, Linear) \\ Param: 408};
+    \begin{tikzpicture}[
+        node distance=0.45cm,
+        lstmblock/.style={rectangle, rounded corners=2pt, minimum width=4.6cm, minimum height=0.78cm, align=center, draw=blue!75!black, fill=blue!6, font=\small},
+        dropblock/.style={rectangle, rounded corners=2pt, minimum width=4.6cm, minimum height=0.78cm, align=center, draw=orange!85!black, fill=orange!8, font=\small},
+        denseblock/.style={rectangle, rounded corners=2pt, minimum width=4.6cm, minimum height=0.78cm, align=center, draw=green!55!black, fill=green!8, font=\small},
+        detail/.style={text width=6.8cm, align=left, font=\footnotesize},
+        flow/.style={thick,->,>=stealth}
+    ]
+        \node[lstmblock] (input) {Input sequence\\$(48, 6)$};
+        \node[lstmblock, below=of input] (lstm1) {LSTM layer 1\\64 units};
+        \node[dropblock, below=of lstm1] (drop1) {Dropout\\rate = 0.2};
+        \node[lstmblock, below=of drop1] (lstm2) {LSTM layer 2\\32 units};
+        \node[dropblock, below=of lstm2] (drop2) {Dropout\\rate = 0.2};
+        \node[denseblock, below=of drop2] (dense1) {Dense\\16 units, ReLU};
+        \node[denseblock, below=of dense1] (output) {Output\\24 PM2.5 values};
 
-        % Arrows
-        \draw [arrow] (input) -- (lstm1);
-        \draw [arrow] (lstm1) -- (drop1);
-        \draw [arrow] (drop1) -- (lstm2);
-        \draw [arrow] (lstm2) -- (drop2);
-        \draw [arrow] (drop2) -- (dense1);
-        \draw [arrow] (dense1) -- (output);
+        \node[detail, right=0.9cm of input] {Cửa sổ quan sát 48 giờ, gồm 6 đặc trưng: $PM_{2.5}$, nhiệt độ, độ ẩm, gió, áp suất, $PM_{10}$.};
+        \node[detail, right=0.9cm of lstm1] {Output: $(48, 64)$; activation $tanh$, gates $sigmoid$; params: 18,176.};
+        \node[detail, right=0.9cm of drop1] {Giảm đồng thích nghi giữa các trạng thái ẩn, chống overfitting.};
+        \node[detail, right=0.9cm of lstm2] {Output: $(32)$; activation $tanh$, gates $sigmoid$; params: 12,416.};
+        \node[detail, right=0.9cm of drop2] {Dropout tiếp tục regularization trước lớp fully connected.};
+        \node[detail, right=0.9cm of dense1] {Biểu diễn phi tuyến cuối; params: 528.};
+        \node[detail, right=0.9cm of output] {Vector dự báo $PM_{2.5}$ cho 24 giờ tiếp theo; linear activation; params: 408.};
+
+        \draw[flow] (input) -- (lstm1);
+        \draw[flow] (lstm1) -- (drop1);
+        \draw[flow] (drop1) -- (lstm2);
+        \draw[flow] (lstm2) -- (drop2);
+        \draw[flow] (drop2) -- (dense1);
+        \draw[flow] (dense1) -- (output);
     \end{tikzpicture}
     \caption{Sơ đồ kiến trúc mạng tuần tự LSTM dự báo đa bước $PM_{2.5}$ cho 24 giờ tới}
     \label{fig:lstm-arch}
@@ -241,15 +261,28 @@ Sơ đồ kiến trúc mạng LSTM chi tiết được mô tả trong Hình~\ref
 
 \subsection{Hàm mất mát và Thuật toán tối ưu}
 
-\begin{itemize}
-    \item \textbf{Hàm mất mát (Loss Function):} Cả ba mô hình đều sử dụng sai số bình phương trung bình (\textbf{Mean Squared Error - MSE}) làm hàm mất mát. Lựa chọn này bắt nguồn từ tính chất bài toán hồi quy nồng độ ô nhiễm: MSE phạt các sai số lớn nặng hơn các sai số nhỏ (thông qua hàm bình phương), buộc mô hình phải tập trung dự báo sát các thời điểm ô nhiễm đỉnh điểm cực đoan (outliers) - điều rất quan trọng trong hệ thống cảnh báo y tế.
-    \item \textbf{Thuật toán tối ưu (Optimizer):} Mạng LSTM được huấn luyện bằng thuật toán \textbf{Adam} với tốc độ học ban đầu là $\eta = 0.001$. Adam kết hợp ưu điểm của cả Momentum và RMSprop, giúp thuật toán hội tụ nhanh chóng qua các điểm yên ngựa trên bề mặt hàm loss.
-    \item \textbf{Bộ điều chỉnh tốc độ học (Learning Rate Scheduler):} Sử dụng callback \texttt{ReduceLROnPlateau} giám sát sai số kiểm định \texttt{val\_loss}. Nếu \texttt{val\_loss} không cải thiện sau 5 epoch liên tiếp, tốc độ học sẽ giảm một nửa (\textit{factor} = 0.5) để thuật toán đi sâu và mịn hơn vào điểm cực tiểu toàn cục.
-\end{itemize}
+Vì biến mục tiêu là giá trị liên tục $PM_{2.5}$, tiêu chí đánh giá chính của toàn bộ hệ thống là sai số hồi quy. MSE/RMSE được ưu tiên vì phạt mạnh các dự báo sai lớn tại các đỉnh ô nhiễm, trong khi MAE được dùng bổ sung để diễn giải sai số trung bình theo đơn vị $\mu g/m^3$.
+
+\begin{table}[H]
+    \centering
+    \caption{Cấu hình hàm mục tiêu và thuật toán tối ưu của các mô hình}
+    \label{tab:loss-optimizer}
+    \begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+        \toprule
+        \textbf{Mô hình} & \textbf{Hàm mục tiêu / Loss} & \textbf{Thuật toán tối ưu} & \textbf{Learning rate / Scheduler} \\
+        \midrule
+        \textbf{SARIMAX} & Ước lượng hợp lý cực đại (Maximum Likelihood); đánh giá bằng RMSE/MAE. & Không dùng SGD/Adam/RMSprop; tham số được tối ưu số bằng MLE trong \texttt{statsmodels}, giới hạn \texttt{maxiter=40}. & Không áp dụng learning rate hay scheduler vì không huấn luyện theo epoch/minibatch. \\
+        \addlinespace
+        \textbf{XGBoost} & \texttt{reg:squarederror}, tương ứng MSE cho bài toán hồi quy. & Không dùng SGD/Adam/RMSprop; tối ưu bằng gradient boosting trên cây quyết định hồi quy. & \texttt{learning\_rate=0.05} cố định; không dùng LR scheduler; \texttt{early\_stopping\_rounds=30} để chọn số vòng boosting phù hợp. \\
+        \addlinespace
+        \textbf{LSTM} & \texttt{MSE loss}; metric theo dõi thêm là MAE. & Adam optimizer. & Learning rate ban đầu $0.001$; \texttt{ReduceLROnPlateau} giảm một nửa khi \texttt{val\_loss} không cải thiện sau 3 epoch. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
 
 \subsection{Siêu tham số và Phương pháp tinh chỉnh}
 
-Các siêu tham số tối ưu thu được qua quá trình thử nghiệm thủ công kết hợp Grid Search trên tập kiểm định được thể hiện trong Bảng~\ref{tab:hyperparams}.
+Cấu hình siêu tham số cuối cùng được lựa chọn dựa trên hiệu năng trên tập Validation và cơ chế dừng sớm được thể hiện trong Bảng~\ref{tab:hyperparams}.
 
 \begin{table}[H]
     \centering
@@ -259,98 +292,65 @@ Các siêu tham số tối ưu thu được qua quá trình thử nghiệm thủ
         \toprule
         \textbf{Mô hình} & \textbf{Siêu tham số chính} & \textbf{Phương pháp tinh chỉnh} \\
         \midrule
-        \textbf{SARIMAX} & Order: $(1, 1, 1)$ \newline Seasonal Order: $(1, 1, 1, 24)$ & Grid Search trên lưới $p, d, q$ tiêu chuẩn \\
+        \textbf{SARIMAX} & Order: $(1, 0, 1)$ \newline Seasonal Order: $(1, 0, 0, 24)$ \newline \texttt{maxiter=40}; biến ngoại sinh gồm khí tượng và độ trễ $PM_{2.5}$ & Thử nghiệm thủ công trên tập validation \\
         \addlinespace
-        \textbf{XGBoost} & $n\_estimators = 500$ \newline $max\_depth = 6$ \newline $learning\_rate = 0.05$ \newline $subsample = 0.8$ \newline $colsample\_bytree = 0.8$ & Randomized Search và tinh chỉnh thủ công \\
+        \textbf{XGBoost} & $n\_estimators = 500$ \newline $max\_depth = 6$ \newline $learning\_rate = 0.05$ \newline $subsample = 0.8$ \newline $colsample\_bytree = 0.8$ \newline $min\_child\_weight = 3$ \newline $reg\_lambda = 1$, $reg\_alpha = 0$ & Randomized Search và tinh chỉnh thủ công trên Validation; \texttt{early\_stopping\_rounds=30} \\
         \addlinespace
-        \textbf{LSTM} & $batch\_size = 256$ \newline $epochs = 50$ \newline $seq\_len = 48$ \newline $dropout = 0.2$ \newline $learning\_rate = 0.001$ & Thử nghiệm thủ công trên tập validation \\
+        \textbf{LSTM} & $batch\_size = 256$ \newline $epochs = 12$ \newline $seq\_len = 48$ \newline $pred\_len = 24$ \newline $dropout = 0.2$ \newline $learning\_rate = 0.001$ & Thử nghiệm thủ công trên Validation; \texttt{EarlyStopping(patience=5)} và \texttt{ReduceLROnPlateau(patience=3)} \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-Để ngăn chặn hiện tượng quá khớp, mạng LSTM sử dụng callback \texttt{EarlyStopping} với tham số \texttt{patience=10} (dừng học nếu sai số kiểm định không cải thiện liên tiếp 10 epoch) và tự động khôi phục lại bộ trọng số tốt nhất (\texttt{restore\_best\_weights=True}).
+Để ngăn chặn hiện tượng quá khớp, mạng LSTM sử dụng callback \texttt{EarlyStopping} với tham số \texttt{patience=5} (dừng học nếu sai số kiểm định không cải thiện liên tiếp 5 epoch) và tự động khôi phục lại bộ trọng số tốt nhất (\texttt{restore\_best\_weights=True}).
 
 % ============================================================
 % 5. KẾT QUẢ THỰC NGHIỆM
 % ============================================================
 \section{Kết quả thực nghiệm}
 
+\subsection{Quy ước đánh giá và lựa chọn mô hình}
+
+Ba mô hình được đánh giá thống nhất trên cùng bài toán hồi quy dự báo $PM_{2.5}$ trước 24 giờ bằng RMSE và MAE trên tập Test. Sau khi so sánh định lượng, XGBoost được chọn làm mô hình chính để phân tích sâu vì đạt sai số Test thấp nhất. Do đó, các phần ma trận nhầm lẫn, chỉ số cảnh báo hậu xử lý và ví dụ lỗi cụ thể tập trung vào XGBoost. SARIMAX vẫn được trình bày như baseline thống kê, còn LSTM được phân tích riêng về kiến trúc và learning curve vì đây là mô hình học sâu của hệ thống.
+
 \subsection{Biểu đồ quá trình học (Learning Curves)}
 
-Quá trình huấn luyện các mô hình học máy (LSTM và XGBoost) được giám sát chặt chẽ qua diễn biến sai số trên tập Train và tập Validation/Test. Quá trình hội tụ được mô tả chi tiết trong Hình~\ref{fig:learning-curve}.
+Quá trình huấn luyện các mô hình học máy (LSTM và XGBoost) được giám sát chặt chẽ qua diễn biến sai số trên tập Train và tập Validation. Quá trình hội tụ được mô tả chi tiết trong Hình~\ref{fig:lstm-curve} và Hình~\ref{fig:xgb-curve}.
+
+Vì đây là bài toán hồi quy, báo cáo không dùng Accuracy trong learning curve. Thay vào đó, các đường học được biểu diễn bằng MSE/MAE đối với LSTM và RMSE đối với XGBoost. Với SARIMAX, khái niệm learning curve theo epoch không áp dụng vì mô hình được ước lượng bằng MLE, không huấn luyện qua epoch như mạng nơ-ron.
+
+\begin{table}[H]
+    \centering
+    \caption{Quy ước biểu diễn quá trình học của từng mô hình}
+    \label{tab:learning-curve-availability}
+    \begin{tabularx}{\textwidth}{l l >{\raggedright\arraybackslash}X}
+        \toprule
+        \textbf{Mô hình} & \textbf{Trục huấn luyện} & \textbf{Metric biểu diễn} \\
+        \midrule
+        \textbf{LSTM} & Epoch & Train/Validation MSE loss và MAE \\
+        \textbf{XGBoost} & Boosting round & Train/Validation RMSE \\
+        \textbf{SARIMAX} & Không áp dụng epoch/round & Không có learning curve theo epoch; đánh giá bằng RMSE/MAE và đồ thị dự báo trên tập Test \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}[b]{0.48\textwidth}
-        \centering
-        \begin{tikzpicture}[scale=0.85]
-            \draw[thick,->] (0,0) -- (5,0) node[anchor=north] {Epochs};
-            \draw[thick,->] (0,0) -- (0,4.5) node[anchor=east] {MSE Loss};
-            
-            % Nhãn trục hoành
-            \foreach \x/\l in {0/1, 1.25/10, 2.5/20, 3.6/29, 4.8/39}
-                \draw (\x,0) -- (\x,-0.1) node[anchor=north] {\small \l};
-                
-            % Nhãn trục tung
-            \foreach \y/\l in {0.5/0.001, 2.25/0.005, 4.0/0.010}
-                \draw (0,\y) -- (-0.1,\y) node[anchor=east] {\small \l};
-                
-            % Đường Train Loss
-            \draw[blue, thick] plot [smooth, tension=0.8] coordinates {
-                (0,4.1) (0.6,2.5) (1.25,1.3) (2.5,0.7) (3.6,0.62) (4.8,0.60)
-            };
-            \node[blue] at (3.5, 1.0) {\scriptsize Train};
-            
-            % Đường Validation Loss
-            \draw[orange, thick, dashed] plot [smooth, tension=0.8] coordinates {
-                (0,3.8) (0.6,2.2) (1.25,1.4) (2.5,0.9) (3.6,0.84) (4.8,0.88)
-            };
-            \node[orange] at (3.5, 1.4) {\scriptsize Val};
-            
-            % Điểm tối ưu
-            \draw[red, fill=red] (3.6,0.84) circle (0.06);
-        \end{tikzpicture}
-        \caption{Hội tụ sai số của LSTM}
-        \label{fig:lstm-curve}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.48\textwidth}
-        \centering
-        \begin{tikzpicture}[scale=0.85]
-            \draw[thick,->] (0,0) -- (5,0) node[anchor=north] {Rounds};
-            \draw[thick,->] (0,0) -- (0,4.5) node[anchor=east] {RMSE ($\mu g/m^3$)};
-            
-            % Nhãn trục hoành
-            \foreach \x/\l in {0/1, 1.25/100, 2.5/200, 3.75/300, 5/500}
-                \draw (\x,0) -- (\x,-0.1) node[anchor=north] {\small \l};
-                
-            % Nhãn trục tung
-            \foreach \y/\l in {0.9/5, 1.8/10, 2.7/15, 3.6/20}
-                \draw (0,\y) -- (-0.1,\y) node[anchor=east] {\small \l};
-                
-            % Đường Train RMSE
-            \draw[blue, thick] plot [smooth, tension=0.7] coordinates {
-                (0,4.2) (0.5,1.2) (1.25,0.7) (2.5,0.5) (3.75,0.4) (5,0.3)
-            };
-            \node[blue] at (3.5, 0.7) {\scriptsize Train};
-            
-            % Đường Test RMSE
-            \draw[orange, thick, dashed] plot [smooth, tension=0.7] coordinates {
-                (0,4.4) (0.5,1.8) (1.25,1.5) (2.5,1.4) (3.75,1.35) (5,1.3)
-            };
-            \node[orange] at (3.5, 1.7) {\scriptsize Test};
-        \end{tikzpicture}
-        \caption{Hội tụ sai số của XGBoost}
-        \label{fig:xgb-curve}
-    \end{subfigure}
-    \caption{Biểu đồ quá trình học (Learning Curves) của LSTM và XGBoost}
-    \label{fig:learning-curve}
+    \includegraphics[width=\textwidth]{figures/lstm_learning_curves.png}
+    \caption{Biểu đồ quá trình học của LSTM trên tập Train và Validation}
+    \label{fig:lstm-curve}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/xgboost_learning_curve.png}
+    \caption{Biểu đồ quá trình học của XGBoost trên tập Train và Validation}
+    \label{fig:xgb-curve}
 \end{figure}
 
 \textbf{Nhận xét biểu đồ hội tụ:}
 \begin{itemize}
-    \item \textbf{Mô hình LSTM (Hình~\ref{fig:lstm-curve}):} Cả hai đường sai số trên tập Train và Validation đều giảm rất nhanh và mượt mà trong 15 epoch đầu tiên. Sau khi bộ điều chỉnh tốc độ học giảm học phí ($\eta$) tại các mốc epoch 19, 24, và 29, đường validation đi ngang rất mịn. Hàm dừng sớm đã kích hoạt kịp thời tại epoch 39 để ngắt quá trình học và phục hồi bộ trọng số tối ưu nhất tại epoch 29 (với giá trị \texttt{val\_loss} đạt cực tiểu $8.40 \times 10^{-4}$).
-    \item \textbf{Mô hình XGBoost (Hình~\ref{fig:xgb-curve}):} Sai số RMSE giảm cực nhanh trong 100 vòng lặp đầu tiên ($RMSE < 10 \mu g/m^3$). Sau đó, tốc độ học chậm lại ($lr=0.05$), các cây quyết định tiếp theo tập trung sửa lỗi tinh vi cho các cây trước đó. Sai số trên tập Test đi ngang và hội tụ ổn định quanh mức $7.12 \mu g/m^3$, khoảng cách giữa Train và Test nhỏ chứng tỏ mô hình kiểm soát tốt quá khớp nhờ các siêu tham số giới hạn độ sâu và tỷ lệ lấy mẫu con.
+    \item \textbf{Mô hình LSTM (Hình~\ref{fig:lstm-curve}):} Cả hai đường sai số trên tập Train và Validation đều giảm trong 12 epoch. Validation loss giảm từ khoảng $0.0298$ ở epoch 1 xuống $0.0137$ ở epoch 12, cho thấy mô hình có hội tụ; tuy nhiên khoảng cách giữa Train loss và Validation loss vẫn tồn tại nên cần tiếp tục kiểm soát overfitting.
+    \item \textbf{Mô hình XGBoost (Hình~\ref{fig:xgb-curve}):} Sai số RMSE giảm nhanh trong khoảng 100 vòng lặp đầu tiên. Sau đó, tốc độ cải thiện trên tập Validation chậm lại và hội tụ quanh mức $18.90 \mu g/m^3$. Kết quả Test đạt $16.42 \mu g/m^3$, tốt nhất trong ba mô hình, nhưng khoảng cách giữa Train và Validation cho thấy vẫn còn hiện tượng quá khớp ở mức vừa phải.
     \item \textbf{Mô hình Baseline SARIMAX:} Không có biểu đồ quá trình học (Learning Curves). Do đây là mô hình thống kê tuyến tính cổ điển, các trọng số được ước lượng trực tiếp một lần duy nhất qua phương pháp ước lượng hợp lý cực đại (\textit{Maximum Likelihood Estimation - MLE}), không trải qua các vòng lặp huấn luyện dạng gradient descent (epoch/round) giống như các mô hình học máy và học sâu (XGBoost, LSTM).
 \end{itemize}
 
@@ -362,63 +362,97 @@ Quá trình huấn luyện các mô hình học máy (LSTM và XGBoost) được
     \centering
     \caption{Bảng so sánh hiệu năng hồi quy dự báo trước 24 giờ trên tập Test}
     \label{tab:regression-metrics}
-    \begin{tabular}{lrrr}
+    \begin{tabular}{llrr}
         \toprule
-        \textbf{Mô hình} & \textbf{Tần suất dữ liệu} & \textbf{RMSE ($\mu g/m^3$)} & \textbf{MAE ($\mu g/m^3$)} \\
+        \textbf{Mô hình} & \textbf{Phạm vi} & \textbf{RMSE ($\mu g/m^3$)} & \textbf{MAE ($\mu g/m^3$)} \\
         \midrule
-        \textbf{SARIMAX (Baseline)} & Dự báo đệ quy (24 bước) & 21.45 & 16.80 \\
-        \textbf{LSTM (Deep Learning)} & Dự báo vector đa bước (24h) & 9.85 & 6.92 \\
-        \textbf{XGBoost (Advanced)} & Dự báo trực tiếp đa bước (24h) & \textbf{7.12} & \textbf{4.85} \\
+        \textbf{SARIMAX (Baseline)} & Hà Nội & 26.03 & 19.12 \\
+        \textbf{LSTM (Deep Learning)} & Ba thành phố & 20.90 & 12.56 \\
+        \textbf{XGBoost (Advanced)} & Ba thành phố & \textbf{16.42} & \textbf{10.21} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
+Về cách dự báo, SARIMAX dự báo đệ quy theo chuỗi thời gian với biến ngoại sinh; LSTM dự báo vector đa bước 24 giờ từ chuỗi 48 giờ trước đó; XGBoost dự báo trực tiếp $PM_{2.5}$ tại mốc $t+24$ từ đặc trưng trễ, rolling và khí tượng.
+
+Lưu ý về phạm vi so sánh: SARIMAX được dùng như baseline thống kê trên chuỗi Hà Nội vì mô hình này phụ thuộc mạnh vào một chuỗi thời gian đơn. XGBoost và LSTM được huấn luyện trên cả ba thành phố nhờ mã hóa biến \texttt{city} và thiết kế dữ liệu theo mẫu/sequence. Do đó, Bảng~\ref{tab:regression-metrics} dùng để so sánh xu hướng hiệu năng giữa ba hướng tiếp cận; mô hình được chọn để phân tích sâu là XGBoost vì có sai số Test thấp nhất trong phạm vi huấn luyện rộng hơn.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/sarimax_test_forecast.png}
+    \caption{Dự báo $PM_{2.5}$ của SARIMAX so với giá trị thực tế trên 240 giờ đầu của tập Test}
+    \label{fig:sarimax-test-forecast}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/xgboost_test_forecast.png}
+    \caption{Dự báo $PM_{2.5}$ của XGBoost so với giá trị thực tế trên 240 thời điểm đầu của Hà Nội trong tập Test}
+    \label{fig:xgb-test-forecast}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/lstm_test_forecast.png}
+    \caption{Dự báo $PM_{2.5}$ của LSTM so với giá trị thực tế trên 240 thời điểm dự báo đầu của Hà Nội trong tập Test}
+    \label{fig:lstm-test-forecast}
+\end{figure}
+
+Ba hình dự báo được đặt trên cùng thành phố Hà Nội để so sánh trực quan với baseline SARIMAX. Các chỉ số RMSE/MAE trong Bảng~\ref{tab:regression-metrics} vẫn được hiểu theo phạm vi đã ghi trong cột ``Phạm vi''.
+
 \textbf{Nhận xét kết quả:}
 \begin{itemize}
-    \item Sai số dự báo trước 24 giờ tự nhiên sẽ cao hơn so với dự báo trước 1 giờ do hiện tượng tích lũy sai số chuỗi (\textit{error accumulation}). Tuy nhiên, mức độ sai số MAE khoảng $4.85 \mu g/m^3$ ở XGBoost vẫn nằm trong ngưỡng sai số cực kỳ nhỏ và hoàn toàn chấp nhận được đối với các mục tiêu y khoa.
-    \item LSTM duy trì sự ổn định tốt trong dự báo dài nhờ cơ chế cổng nhớ kiểm soát lan truyền lỗi, đạt MAE $6.92 \mu g/m^3$.
-    \item XGBoost vẫn giữ vị thế dẫn đầu nhờ tính toán đặc trưng ngoại sinh linh hoạt ở các khoảng thời gian trễ lớn.
+    \item Sai số dự báo trước 24 giờ cao hơn đáng kể so với dự báo ngắn hạn do hiện tượng tích lũy sai số chuỗi (\textit{error accumulation}) và các biến động ô nhiễm đột ngột. XGBoost đạt MAE $10.21 \mu g/m^3$, là kết quả tốt nhất trong nhóm mô hình đã thử nghiệm.
+    \item LSTM đạt MAE $12.56 \mu g/m^3$, thấp hơn SARIMAX nhưng chưa vượt XGBoost. Điều này cho thấy mạng tuần tự học được xu hướng thời gian, nhưng cần thêm tuning/feature khí tượng tương lai để cải thiện dự báo đỉnh ô nhiễm.
+    \item XGBoost giữ vị thế dẫn đầu nhờ khai thác hiệu quả đặc trưng trễ, rolling và biến ngoại sinh dạng bảng.
 \end{itemize}
 
-\subsection{Ma trận nhầm lẫn (Confusion Matrix) của phân loại cảnh báo trước 24h}
+\subsection{Ma trận nhầm lẫn sau khi phân nhóm PM2.5 dự báo}
 
-Để đưa ra cảnh báo sớm y tế trước 1 ngày, nồng độ bụi mịn $PM_{2.5}$ dự đoán trước 24h được quy đổi ra 6 cấp độ phân loại AQI theo QCVN. Bảng~\ref{tab:confusion-matrix} trình bày ma trận nhầm lẫn của mô hình tối ưu XGBoost trên tập Test khi dự báo trước 24h.
+Biến mục tiêu của mô hình vẫn là giá trị liên tục $PM_{2.5}$ sau 24 giờ, do đó mô hình được huấn luyện như một bài toán hồi quy. Để phục vụ yêu cầu phân tích cảnh báo, $PM_{2.5}$ thực tế và $PM_{2.5}$ dự báo được quy đổi hậu xử lý sang 6 nhóm rủi ro theo ngưỡng PM2.5. Bảng~\ref{tab:confusion-matrix} trình bày ma trận nhầm lẫn của mô hình XGBoost trên tập Test sau bước ánh xạ này.
 
 \begin{table}[H]
     \centering
-    \caption{Ma trận nhầm lẫn ánh xạ phân loại cảnh báo trước 24h (XGBoost)}
+    \caption{Ma trận nhầm lẫn sau khi ánh xạ $PM_{2.5}$ thực tế/dự báo sang nhóm rủi ro (XGBoost; đơn vị: số mẫu)}
     \label{tab:confusion-matrix}
     \begin{tabular}{c|cccccc}
         \toprule
         \textbf{Thực tế $\backslash$ Dự đoán} & \textbf{Tốt} & \textbf{Trung bình} & \textbf{Kém} & \textbf{Xấu} & \textbf{Rất xấu} & \textbf{Nguy hại} \\
         \midrule
-        \textbf{Tốt} & \textbf{862} & 132 & 0 & 0 & 0 & 0 \\
-        \textbf{Trung bình} & 124 & \textbf{7780} & 495 & 6 & 0 & 0 \\
-        \textbf{Kém} & 0 & 288 & \textbf{2452} & 198 & 0 & 0 \\
-        \textbf{Xấu} & 0 & 0 & 201 & \textbf{1284} & 89 & 1 \\
-        \textbf{Rất xấu} & 0 & 0 & 0 & 42 & \textbf{198} & 7 \\
-        \textbf{Nguy hại} & 0 & 0 & 0 & 0 & 3 & \textbf{7} \\
+        \textbf{Tốt} & \textbf{147} & 1493 & 77 & 7 & 0 & 0 \\
+        \textbf{Trung bình} & 35 & \textbf{7738} & 1037 & 118 & 0 & 0 \\
+        \textbf{Kém} & 1 & 926 & \textbf{1044} & 275 & 0 & 0 \\
+        \textbf{Xấu} & 0 & 189 & 794 & \textbf{891} & 0 & 0 \\
+        \textbf{Rất xấu} & 0 & 0 & 13 & 32 & \textbf{0} & 0 \\
+        \textbf{Nguy hại} & 0 & 0 & 0 & 0 & 0 & \textbf{0} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-Các chỉ số đánh giá định lượng cho bài toán phân loại tương ứng được liệt kê trong Bảng~\ref{tab:classification-metrics}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/xgboost_confusion_matrix.png}
+    \caption{Ma trận nhầm lẫn dạng heatmap của XGBoost sau khi ánh xạ $PM_{2.5}$ thực tế/dự báo sang nhóm rủi ro}
+    \label{fig:xgb-confusion-matrix}
+\end{figure}
+
+Các chỉ số Accuracy, Precision, Recall và F1-Score trong Bảng~\ref{tab:classification-metrics} vì vậy là chỉ số của lớp cảnh báo hậu xử lý, không phải hàm mục tiêu huấn luyện của mô hình.
 
 \begin{table}[H]
     \centering
-    \caption{Các chỉ số phân loại chất lượng không khí tổng hợp trước 24h}
+    \caption{Các chỉ số cảnh báo sau khi phân nhóm $PM_{2.5}$ trước 24h (đơn vị: \%)}
     \label{tab:classification-metrics}
     \begin{tabular}{lcccc}
         \toprule
         \textbf{Chỉ số} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
         \midrule
-        \textbf{Giá trị (\%)} & 91.24\% & 90.15\% & 90.62\% & 90.38\% \\
+        \textbf{Giá trị (\%)} & 66.28\% & 68.27\% & 66.28\% & 63.30\% \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \textbf{Phân tích ma trận nhầm lẫn:}
-Mặc dù khoảng cách dự báo tăng lên 24 giờ, độ chính xác tổng thể của hệ thống vẫn duy trì ở mức cao (\textbf{91.24\%}), F1-Score đạt \textbf{90.38\%}. Khả năng nhận diện các ngày ô nhiễm cực đoan (Rất xấu và Nguy hại) có độ nhạy tốt, giúp cung cấp thông tin cảnh báo chất lượng không khí tin cậy trước một ngày cho các bệnh nhân hô hấp chuẩn bị kế hoạch phòng hộ cá nhân.
+Mặc dù khoảng cách dự báo tăng lên 24 giờ, độ chính xác tổng thể của hệ thống đạt \textbf{66.28\%}, F1-Score có trọng số đạt \textbf{63.30\%}. Mô hình phân biệt tốt nhất ở nhóm \textit{Trung bình}, nhưng còn nhầm lẫn đáng kể giữa các nhóm liền kề như \textit{Kém} và \textit{Xấu}. Hai lớp \textit{Rất xấu} và \textit{Nguy hại} rất ít mẫu trong tập Test nên mô hình chưa nhận diện ổn định; đây là điểm cần cải thiện bằng cân bằng dữ liệu hoặc tối ưu hàm mất mát theo chi phí cảnh báo.
 
 % ============================================================
 % 6. THẢO LUẬN VÀ PHÂN TÍCH LỖI
@@ -427,24 +461,56 @@ Mặc dù khoảng cách dự báo tăng lên 24 giờ, độ chính xác tổng
 
 \subsection{Hiện tượng Overfitting và Underfitting}
 
-Dựa vào sai số trên tập Train và tập Test của mô hình XGBoost:
+Dựa vào sai số trên tập Train, Validation và Test của mô hình XGBoost:
 \begin{itemize}
-    \item \textbf{Train RMSE:} $1.67 \mu g/m^3$
-    \item \textbf{Test RMSE:} $7.12 \mu g/m^3$
+    \item \textbf{Train RMSE:} $11.55 \mu g/m^3$
+    \item \textbf{Validation RMSE:} $18.90 \mu g/m^3$
+    \item \textbf{Test RMSE:} $16.42 \mu g/m^3$
 \end{itemize}
 
-Sự chênh lệch giữa sai số huấn luyện và sai số kiểm thử là tương đối nhỏ ($5.45 \mu g/m^3$), cho thấy mô hình không bị rơi vào trạng thái quá khớp (\textit{Overfitting}) nghiêm trọng. Sự khái quát hóa tốt này đạt được nhờ:
+\begin{table}[H]
+    \centering
+    \caption{Chẩn đoán overfitting/underfitting dựa trên RMSE Train/Validation/Test (đơn vị: $\mu g/m^3$)}
+    \label{tab:overfit-diagnosis}
+    \begin{tabularx}{\textwidth}{@{}lccc>{\raggedright\arraybackslash}X@{}}
+        \toprule
+        \textbf{Mô hình} & \shortstack{\textbf{Train}\\\textbf{RMSE}} & \shortstack{\textbf{Validation}\\\textbf{RMSE}} & \shortstack{\textbf{Test}\\\textbf{RMSE}} & \textbf{Kết luận} \\
+        \midrule
+        \textbf{XGBoost} & 11.55 & 18.90 & 16.42 & Có overfitting mức vừa phải nhưng tổng quát hóa tốt nhất trong ba mô hình. \\
+        \textbf{LSTM} & 16.69 & 24.64 & 20.90 & Có overfitting rõ hơn XGBoost; cần Dropout, Early Stopping và thêm đặc trưng tương lai. \\
+        \textbf{SARIMAX} & 4.72 & 26.40 & 26.03 & Khả năng tổng quát hóa kém do giả định tuyến tính và lệch phân phối theo thời gian. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Sự chênh lệch giữa sai số huấn luyện và sai số kiểm định là khoảng $7.35 \mu g/m^3$, cho thấy mô hình có dấu hiệu quá khớp ở mức vừa phải. Tuy nhiên, XGBoost vẫn là mô hình tốt nhất trên tập Test trong ba mô hình so sánh. Mạng LSTM cũng có khoảng cách Train--Validation rõ rệt (RMSE $16.69$ so với $24.64 \mu g/m^3$), nên cần Early Stopping và Dropout để hạn chế học thuộc nhiễu trong chuỗi. Các biện pháp kiểm soát quá khớp đã áp dụng gồm:
 \begin{enumerate}
     \item Áp dụng cơ chế Regularization $L_1$/$L_2$ tích hợp trong thuật toán cây của XGBoost.
     \item Sử dụng tỷ lệ lấy mẫu con của dòng và cột (\texttt{subsample} = 0.8, \texttt{colsample\_bytree} = 0.8) để bổ sung tính ngẫu nhiên tương tự Random Forest.
-    \item Cơ chế dừng sớm tự động ngắt khi sai số trên tập test đi ngang.
+    \item Cơ chế dừng sớm tự động ngắt khi sai số trên tập Validation đi ngang.
 \end{enumerate}
 
-Mô hình SARIMAX bị rơi vào trạng thái lệch dưới (\textit{Underfitting}) do không thể mô hình hóa được sự tương tác đa chiều phi tuyến tính giữa các yếu tố thời tiết và bụi mịn.
+Mô hình SARIMAX có Train RMSE thấp ($4.72 \mu g/m^3$) nhưng Validation/Test RMSE tăng mạnh ($26.40$ và $26.03 \mu g/m^3$). Do đó, vấn đề chính không phải là underfitting thuần túy, mà là khả năng tổng quát hóa kém khi chuỗi kiểm thử có phân phối và đỉnh ô nhiễm khác giai đoạn huấn luyện. Giới hạn này xuất phát từ giả định tuyến tính của SARIMAX và việc mô hình khó biểu diễn tương tác phi tuyến giữa khí tượng, độ trễ và nguồn phát thải.
 
 \subsection{Phân tích các trường hợp dự đoán sai điển hình}
 
-Qua rà soát chi tiết các mẫu dự đoán trước 24h có sai số tuyệt đối lớn nhất ($Error > 30 \mu g/m^3$), nhóm phát hiện ba kịch bản lỗi hệ thống sau:
+Qua rà soát chi tiết các mẫu dự đoán trước 24h có sai số tuyệt đối lớn nhất ($Error > 30 \mu g/m^3$), nhóm ghi nhận một số trường hợp sai điển hình trong Bảng~\ref{tab:error-cases} và phát hiện ba kịch bản lỗi hệ thống sau:
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \caption{Một số trường hợp dự đoán sai lớn nhất của XGBoost trên tập Test (đơn vị $PM_{2.5}$: $\mu g/m^3$)}
+    \label{tab:error-cases}
+    \begin{tabular}{p{2.4cm}p{1.3cm}rrrp{2.0cm}p{4.2cm}}
+        \toprule
+        \textbf{Thời điểm dự báo} & \textbf{Thành phố} & \textbf{Thực tế} & \textbf{Dự báo} & \textbf{Sai số} & \textbf{Lớp thực tế/dự báo} & \textbf{Giả thuyết nguyên nhân} \\
+        \midrule
+        2026-04-25 06:00 & Hà Nội & 186.70 & 45.76 & 140.94 & Rất xấu/Kém & Đánh giá thấp đỉnh ô nhiễm, có thể thiếu biến nguồn thải đột xuất. \\
+        2026-04-25 05:00 & Hà Nội & 181.60 & 47.28 & 134.32 & Rất xấu/Kém & Độ ẩm rất cao và biến động cục bộ làm mô hình dự báo thấp hơn thực tế. \\
+        2026-04-12 19:00 & Hà Nội & 185.30 & 55.92 & 129.38 & Rất xấu/Xấu & Đỉnh ô nhiễm buổi tối không được đặc trưng trễ và khí tượng giải thích đầy đủ. \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \begin{enumerate}
     \item \textbf{Sự suy giảm hiệu năng theo khoảng thời gian dự báo (Horizon Decay \& Error Accumulation):} Khi dự đoán xa đến 24h hoặc 48h, sự thiếu hụt các thông tin tức thời làm tích lũy sai số. Mô hình dựa nhiều vào dự báo khí tượng ngoại sinh tương lai làm đầu vào phụ trợ, do đó sự sai lệch của mô hình dự báo thời tiết cũng sẽ trực tiếp phóng đại sai số dự đoán bụi mịn.

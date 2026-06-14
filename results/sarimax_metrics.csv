@@ -1,0 +1,2 @@
+﻿model,scope,train_rmse_ug_m3,val_rmse_ug_m3,test_rmse_ug_m3,test_mae_ug_m3,test_r2
+SARIMAX,Hà Nội,4.720369470875401,26.396830927792514,26.0295185835378,19.115445116950394,0.3217028771429862

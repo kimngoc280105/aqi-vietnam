@@ -1,0 +1,2 @@
+﻿model,scope,train_rmse_ug_m3,val_rmse_ug_m3,test_rmse_ug_m3,test_mae_ug_m3,test_r2
+XGBoost,All cities,11.551893473550594,18.898450583661337,16.418476731412316,10.210209640275854,0.5626360146518101
