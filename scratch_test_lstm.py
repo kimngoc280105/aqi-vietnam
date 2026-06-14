@@ -34,9 +34,12 @@ def create_sequences(data, seq_len, pred_len, target_idx=0):
     return np.array(X), np.array(y)
 
 X_all, y_all = create_sequences(data_scaled, SEQ_LEN, PRED_LEN)
-split = int(len(X_all) * 0.8)
-X_train, X_test = X_all[:split], X_all[split:]
-y_train, y_test = y_all[:split], y_all[split:]
+train_split = int(len(X_all) * 0.70)
+val_split   = int(len(X_all) * 0.85)
+X_train, X_test = X_all[:train_split], X_all[val_split:]
+y_train, y_test = y_all[:train_split], y_all[val_split:]
+X_val = X_all[train_split:val_split]
+y_val = y_all[train_split:val_split]
 
 print("X_train shape:", X_train.shape)
 print("y_train shape:", y_train.shape)
@@ -53,7 +56,7 @@ model_lstm = Sequential([
 model_lstm.compile(optimizer='adam', loss='mse', metrics=['mae'])
 
 # Train for just 1 epoch to see if it works
-model_lstm.fit(X_train, y_train, epochs=1, batch_size=256, validation_split=0.1, verbose=1)
+model_lstm.fit(X_train, y_train, epochs=1, batch_size=256, validation_data=(X_val, y_val), verbose=1)
 
 y_pred_scaled = model_lstm.predict(X_test)
 print("y_pred_scaled shape:", y_pred_scaled.shape)
