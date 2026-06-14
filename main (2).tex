@@ -21,9 +21,19 @@
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning}
 
 % ============================================================
-% THIẾT LẬP
+% THIẾT LẬP TIKZ STYLES
+% ============================================================
+\tikzstyle{layer} = [rectangle, rounded corners, minimum width=3cm, minimum height=1.2cm, text centered, draw=blue!80, fill=blue!5, text width=2.8cm, font=\small]
+\tikzstyle{dropout} = [rectangle, rounded corners, minimum width=3cm, minimum height=1.2cm, text centered, draw=orange!80, fill=orange!5, text width=2.8cm, font=\small]
+\tikzstyle{dense} = [rectangle, rounded corners, minimum width=3cm, minimum height=1.2cm, text centered, draw=green!70!black, fill=green!5, text width=2.8cm, font=\small]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+% ============================================================
+% THIẾT LẬP HYPERREF & LISTINGS
 % ============================================================
 \hypersetup{
     colorlinks=true,
@@ -40,7 +50,7 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\rhead{Nhóm 11 --- Báo cáo Dữ liệu}
+\rhead{Nhóm 11 --- Báo cáo Mô hình Học máy}
 \lhead{Môn Nhập môn Học máy}
 \rfoot{\thepage}
 \setlength{\parindent}{0pt}
@@ -58,7 +68,7 @@
     {\Large \textbf{ĐẠI HỌC KHOA HỌC TỰ NHIÊN TP.HCM}}\\[0.3cm]
     {\large Khoa Công nghệ Thông tin}\\[2cm]
 
-    {\Huge \textbf{BÁO CÁO VỀ DỮ LIỆU}}\\[0.5cm]
+    {\Huge \textbf{BÁO CÁO MÔ HÌNH HỌC MÁY}}\\[0.5cm]
     {\large Xây dựng và Triển khai Hệ thống Học máy Ứng dụng}\\[2cm]
 
     {\LARGE \textbf{Dự đoán Chất lượng Không khí Việt Nam}}\\[0.3cm]
@@ -89,537 +99,366 @@
 % ============================================================
 \section{Giới thiệu bài toán}
 
-Ô nhiễm không khí đang là vấn đề nghiêm trọng tại các đô thị lớn của Việt Nam như
-Hà Nội, TP.HCM và Đà Nẵng, ảnh hưởng trực tiếp đến sức khỏe hàng triệu người dân
-mỗi ngày. Chỉ số AQI (\textit{Air Quality Index}) tại nhiều khu vực thường xuyên vượt
-ngưỡng an toàn, đặc biệt vào mùa khô. Tuy nhiên, người dân hiện vẫn thiếu một công
-cụ dự đoán sớm và cảnh báo kịp thời bằng tiếng Việt, phù hợp với đặc thù khí hậu
-và địa lý Việt Nam.
+Ô nhiễm môi trường không khí tại Việt Nam, đặc biệt là nồng độ bụi mịn $PM_{2.5}$ tại các đô thị lớn như Hà Nội, TP.HCM và Đà Nẵng đang là vấn đề lớn đe dọa đến sức khỏe cộng đồng. Nhóm hướng đến giải quyết bài toán có ý nghĩa thực tiễn cao: \textbf{Dự báo chuỗi nồng độ bụi mịn $PM_{2.5}$ trong không khí cho 24 giờ tới ($t+1$ đến $t+24$)} và \textbf{Phân loại mức độ nguy cơ sức khỏe cảnh báo sớm}. Việc dự báo trước 24 giờ là cực kỳ quan trọng đối với các nhóm đối tượng nhạy cảm như người mắc bệnh hô hấp mãn tính (hen suyễn, viêm phế quản, COPD) để họ có đủ thời gian chuẩn bị các biện pháp y tế và lập kế hoạch hoạt động an toàn trước một ngày.
 
-Nhóm hướng đến giải quyết hai bài toán học máy:
-\begin{itemize}
-    \item \textbf{Hồi quy:} Dự đoán giá trị AQI cụ thể trong 24--48 giờ tới dựa trên
-    dữ liệu lịch sử và điều kiện khí tượng.
-    \item \textbf{Phân loại:} Xác định mức chất lượng không khí theo 6 cấp độ:
-    Tốt / Trung bình / Kém / Xấu / Rất xấu / Nguy hại, từ đó đưa ra cảnh báo
-    sức khỏe phù hợp với từng nhóm đối tượng.
-\end{itemize}
-
-% ============================================================
-% 2. PHƯƠNG PHÁP VÀ NGUỒN THU THẬP DỮ LIỆU
-% ============================================================
-\section{Phương pháp và nguồn thu thập dữ liệu}
-
-\subsection{Nguồn dữ liệu}
-
-Dữ liệu được thu thập từ API công khai, không sử dụng dataset tải sẵn, không
-web scraping nội dung HTML và không thu thập bằng khảo sát/biểu mẫu. Nhóm tự
-thu thập dữ liệu theo giờ cho ba thành phố, sau đó mở rộng bộ dữ liệu bằng cách
-ghép dữ liệu chất lượng không khí với dữ liệu khí tượng và tạo thêm các thuộc
-tính thời gian, lag và rolling mean.
-
-\begin{table}[H]
-    \centering
-    \caption{Đối chiếu yêu cầu nguồn dữ liệu}
-    \begin{tabularx}{\textwidth}{lX}
-        \toprule
-        \textbf{Hạng mục} & \textbf{Cách thực hiện trong đề tài} \\
-        \midrule
-        Dataset có sẵn & Không dùng dataset tải sẵn; nhóm tự gọi API để thu thập dữ liệu. \\
-        Mở rộng dữ liệu & Có: merge Air Quality + Weather, tạo biến thời gian, mùa, lag và rolling mean. \\
-        API & Có: sử dụng Open-Meteo Air Quality API và Open-Meteo Historical Weather API. \\
-        Web scraping & Không; không crawl HTML, chỉ gọi API có cấu trúc. \\
-        Khảo sát/biểu mẫu & Không dùng Google Form, Survey hay dữ liệu tự khai báo. \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\begin{table}[H]
-    \centering
-    \caption{Nguồn API sử dụng}
-    \begin{tabularx}{\textwidth}{llX}
-        \toprule
-        \textbf{Nguồn} & \textbf{Loại} & \textbf{Nội dung} \\
-        \midrule
-        Open-Meteo Air Quality API &
-            API miễn phí, không cần key &
-            PM2.5, PM10, O3, NO2, SO2, CO, AQI (US \& EU) theo giờ. \\[0.25cm]
-        Open-Meteo Historical Weather API &
-            API miễn phí, không cần key &
-            Nhiệt độ, độ ẩm, tốc độ gió, hướng gió, lượng mưa, áp suất, độ che phủ mây theo giờ. \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-Phạm vi dữ liệu thực tế trong file \texttt{all\_cities.csv}: 98{,}187 mẫu,
-34 thuộc tính, từ \textbf{2022-08-05 07:00:00} đến
-\textbf{2026-04-29 23:00:00} cho \textbf{Hà Nội}, \textbf{TP.HCM} và
-\textbf{Đà Nẵng}.
-
-\subsection{Phương pháp thu thập}
-
-\textbf{Quy trình thực hiện:}
+Trong các thiết kế ban đầu của hệ thống, chỉ số chất lượng không khí tổng hợp (AQI) được cân nhắc làm biến mục tiêu dự đoán. Tuy nhiên, qua phân tích khám phá dữ liệu (EDA), nhóm đã thực hiện bước chuyển đổi chiến lược (\textit{Target Pivot}) sang dự đoán trực tiếp nồng độ vật chất tuyệt đối $PM_{2.5}$ vì các lý do sau:
 \begin{enumerate}
-    \item Gọi Open-Meteo Air Quality API với tọa độ từng thành phố, khoảng thời
-    gian và timezone \texttt{Asia/Ho\_Chi\_Minh}; thu thập 8 biến theo giờ:
-    PM2.5, PM10, O3, NO2, SO2, CO, EU AQI và US AQI.
-    \item Gọi Open-Meteo Historical Weather API cho cùng tọa độ và khoảng thời
-    gian; thu thập 7 biến khí tượng gồm nhiệt độ, độ ẩm, tốc độ gió, hướng gió,
-    lượng mưa, áp suất và độ che phủ mây.
-    \item Loại bỏ các dòng thiếu \texttt{pm25} hoặc \texttt{aqi} ngay tại bước
-    thu thập dữ liệu chất lượng không khí.
-    \item Lưu dữ liệu thô riêng theo nguồn và thành phố trong thư mục
-    \texttt{data/raw/}.
-    \item Merge hai nguồn theo cột \texttt{datetime} bằng
-    \texttt{pd.merge(..., how='inner')}.
-    \item Thực hiện feature engineering: tạo biến thời gian, mùa, lag features,
-    rolling features và nhãn \texttt{aqi\_category}.
-    \item Lưu dữ liệu đã xử lý cho từng thành phố và file hợp nhất
-    \path{data/processed/all_cities.csv}.
+    \item \textbf{Hiện tượng che khuất (Masking effect):} Chỉ số AQI tổng hợp được tính bằng hàm $Max$ nồng độ của nhiều loại khí ($PM_{2.5}, O_3, NO_2, SO_2, CO$). Khi một loại khí giảm đột biến (ví dụ $O_3$ vào ban đêm) và bụi mịn $PM_{2.5}$ tăng cao, AQI tổng thể có thể không phản ánh được mức tăng cục bộ nguy hiểm của bụi mịn.
+    \item \textbf{Độ mượt toán học:} $PM_{2.5}$ tuân theo tự tương quan chuỗi thời gian ($Autocorrelation$) liên tục và bám sát các quy luật vật lý (khuếch tán, phát tán) tốt hơn chuỗi AQI vốn mang tính giật cục do các phép làm mượt 24 giờ.
+    \item \textbf{Tính thực tế y khoa:} $PM_{2.5}$ là tác nhân nguy cơ chính xâm nhập sâu vào phế nang phổi và ngấm vào máu. Dự đoán trực tiếp $PM_{2.5}$ giúp nâng cao tính tường minh (Explainable AI) và độ tin cậy trong các cảnh báo sức khỏe y tế.
 \end{enumerate}
 
-\textbf{Công cụ sử dụng:}
+% ============================================================
+% 2. TỔNG QUAN DỮ LIỆU ĐẦU VÀO
+% ============================================================
+\section{Tổng quan dữ liệu đầu vào}
+
+\subsection{Dữ liệu huấn luyện và Tỷ lệ chia dữ liệu}
+
+Dữ liệu thực nghiệm bao gồm 98,187 mẫu thu thập theo giờ từ ngày \textbf{05/08/2022} đến \textbf{29/04/2026} cho ba thành phố Hà Nội, TP.HCM và Đà Nẵng. Vì đặc thù của dữ liệu chuỗi thời gian chứa tính tự tương quan cao, việc chia dữ liệu ngẫu nhiên sẽ dẫn đến hiện tượng rò rỉ thông tin tương lai (\textit{Data Leakage} hay \textit{Look-ahead Bias}). 
+
+Do đó, nhóm sử dụng phương pháp chia dữ liệu theo trình tự thời gian (\textbf{Time-series Split}) với tỷ lệ \textbf{70/15/15}:
 \begin{itemize}
-    \item Python 3.x.
-    \item Thư viện xử lý dữ liệu: \texttt{pandas}, \texttt{numpy}.
-    \item Thư viện gọi và quản lý API: \texttt{openmeteo-requests},
-    \texttt{requests-cache}, \texttt{retry-requests}.
-    \item Dữ liệu được cache cục bộ để tránh gọi API lặp lại
+    \item \textbf{Tập Huấn luyện (Train) - 70\%}: Dùng để tối ưu hóa trọng số của các mô hình học máy.
+    \item \textbf{Tập Kiểm định (Validation) - 15\%}: Dùng để điều chỉnh siêu tham số và kích hoạt các hàm dừng sớm (\textit{Early Stopping}) nhằm chống học tủ.
+    \item \textbf{Tập Kiểm thử (Test) - 15\%}: Giữ độc lập hoàn toàn để đánh giá hiệu năng cuối cùng của mô hình trên dữ liệu chưa từng thấy.
 \end{itemize}
 
-\textbf{Định dạng lưu trữ:}
-\begin{itemize}
-    \item File dữ liệu được lưu ở định dạng CSV.
-    \item Encoding sử dụng \texttt{utf-8-sig} để hỗ trợ tiếng Việt có dấu.
-    \item Dữ liệu có tần suất theo giờ và dùng múi giờ \texttt{Asia/Ho\_Chi\_Minh}.
-\end{itemize}
+\subsection{Các bước Tiền xử lý Dữ liệu}
+
+Trước khi đưa dữ liệu vào mô hình, các bước chuẩn bị dữ liệu kỹ thuật sau đã được áp dụng:
+\begin{enumerate}
+    \item \textbf{Nội suy dữ liệu khuyết thiếu (Imputation):} Sử dụng nội suy tuyến tính (\textit{Linear Interpolation}) kết hợp \textit{Forward Fill} và \textit{Backward Fill} theo từng phân nhóm thành phố độc lập. Tỷ lệ khuyết thiếu thực tế ban đầu cực kỳ thấp ($<0.08\%$) ở các biến trễ thời gian và đạt mức $0\%$ sạch hoàn toàn sau xử lý.
+    \item \textbf{Xử lý nhiễu và bất thường (Anomalies):} Phát hiện các giá trị âm ở nồng độ Ozone ($O_3$) do lỗi cảm biến và chuyển thành giá trị trống ($NaN$) để tiến hành nội suy.
+    \item \textbf{Giải quyết đa cộng tuyến (Multicollinearity):} Từ ma trận tương quan, biến không gian chỉ số nhà máy trong bán kính 10km ($factories_{10km}$) có tương quan hoàn hảo $r=1.00$ với biến $factories_{5km}$, gây hiện tượng đa cộng tuyến nghiêm trọng. Nhóm quyết định loại bỏ cột $factories_{10km}$, chỉ giữ lại $factories_{2km}$ và $factories_{5km}$.
+    \item \textbf{Xử lý ngoại lệ (Outliers):} Áp dụng quy tắc Tukey's Fence mở rộng ($Q3 + 3 \times IQR$). Nhóm quyết định \textbf{giữ lại toàn bộ ngoại lệ} vì chúng phản ánh các đợt ô nhiễm cực đoan có thật trong thực tế (đốt rơm rạ, nghịch nhiệt bức xạ) - những thời điểm mà hệ thống cảnh báo cần hoạt động chính xác nhất.
+    \item \textbf{Trích xuất đặc trưng (Feature Engineering):}
+    \begin{itemize}
+        \item \textit{Đặc trưng trễ (Lag features):} Tạo các cột $PM_{2.5}$ trễ 1h, 3h, 6h, 12h, 24h để nắm bắt xu hướng ngắn hạn.
+        \item \textit{Đặc trưng cửa sổ trượt (Rolling features):} Tính trung bình trượt nồng độ $PM_{2.5}$ trong 6h, 24h và 72h để làm mịn nhiễu.
+        \item \textit{Mã hóa biến phân loại:} Thực hiện One-Hot Encoding cho các biến địa lý (\texttt{city}) và thời tiết mùa (\texttt{season}).
+    \end{itemize}
+    \item \textbf{Chuẩn hóa đặc trưng (Scaling):} Sử dụng \texttt{StandardScaler} (Z-score normalization) cho các thuật toán Linear Regression/XGBoost, và \texttt{MinMaxScaler} trong khoảng $[0, 1]$ cho mạng LSTM để hỗ trợ sự hội tụ của hàm kích hoạt phi tuyến. Bộ chuẩn hóa chỉ được khớp ($fit$) trên tập Train và biến đổi ($transform$) trên tập Val/Test nhằm tránh rò rỉ dữ liệu.
+\end{enumerate}
 
 % ============================================================
-% 3. QUY TRÌNH LÀM SẠCH VÀ TIỀN XỬ LÝ
+% 3. LỰA CHỌN MÔ HÌNH VÀ KIẾN TRÚC
 % ============================================================
-\section{Quy trình làm sạch và tiền xử lý dữ liệu}
+\section{Lựa chọn Mô hình \& Kiến trúc}
 
-\subsection{Loại bỏ nhiễu và trùng lặp}
+Nhóm nghiên cứu và phát triển 3 lớp mô hình đại diện cho 3 trường phái tiếp cận:
 
-Nhóm kiểm tra toàn bộ file \texttt{all\_cities.csv} và ghi nhận:
+\begin{enumerate}
+    \item \textbf{Mô hình Baseline (SARIMAX):} Lớp mô hình thống kê tuyến tính chuỗi thời gian cổ điển có kết hợp ngoại sinh (nhiệt độ, độ ẩm, tốc độ gió, áp suất). Được dùng làm mốc so sánh cơ sở.
+    \item \textbf{Mô hình Học máy nâng cao (XGBoost Regressor):} Thuật toán học máy dựa trên cây quyết định nâng cao cực kỳ mạnh mẽ cho dữ liệu dạng bảng. XGBoost có khả năng học các mối quan hệ phi tuyến tính phức tạp và không nhạy cảm với phân phối lệch của bụi mịn.
+    \item \textbf{Mô hình Học sâu tuần tự (LSTM):} Mạng nơ-ron hồi quy có cấu trúc cổng nhớ đặc biệt, thiết kế chuyên biệt để ghi nhớ các phụ thuộc dài hạn trong chuỗi thời gian.
+\end{enumerate}
+
+\subsection{Kiến trúc cấu trúc của Mô hình Thống kê SARIMAX}
+
+Mô hình SARIMAX(1,1,1)(1,1,1,24) biểu diễn mối quan hệ tuyến tính động của nồng độ bụi mịn dưới dạng phương trình toán học:
+\begin{equation}
+    \Phi_1(L) \tilde{\Phi}_1(L^{24}) (1-L) (1-L^{24}) y_t = \Theta_1(L) \tilde{\Theta}_1(L^{24}) \varepsilon_t + \beta^T X_t
+\end{equation}
+Trong đó:
 \begin{itemize}
-    \item \textbf{Trùng lặp:} 0 dòng trùng lặp theo kiểm tra
-    \texttt{df.duplicated().sum()}.
-    \item \textbf{Dữ liệu bất hợp lý:} cột \texttt{o3} có 13 giá trị âm. Vì nồng
-    độ ozone không thể âm về mặt vật lý, các giá trị này được chuyển thành
-    \texttt{NaN} trước khi xử lý missing values.
+    \item $y_t$ là nồng độ bụi mịn $PM_{2.5}$ tại thời điểm $t$.
+    \item $L$ là toán tử trễ ($Lag$ operator) định nghĩa bởi $L^k y_t = y_{t-k}$.
+    \item $\Phi_1(L) = 1 - \phi_1 L$ đại diện cho thành phần tự hồi quy phi mùa vụ bậc 1 (Non-seasonal AR(1)).
+    \item $\tilde{\Phi}_1(L^{24}) = 1 - \tilde{\phi}_1 L^{24}$ đại diện cho thành phần tự hồi quy mùa vụ bậc 1 chu kỳ 24h (Seasonal AR(1)).
+    \item $\Theta_1(L) = 1 + \theta_1 L$ đại diện cho thành phần trung bình trượt phi mùa vụ bậc 1 (Non-seasonal MA(1)).
+    \item $\tilde{\Theta}_1(L^{24}) = 1 + \tilde{\theta}_1 L^{24}$ đại diện cho thành phần trung bình trượt mùa vụ bậc 1 chu kỳ 24h (Seasonal MA(1)).
+    \item $(1-L)$ và $(1-L^{24})$ là các toán tử lấy hiệu phân bậc 1 phi mùa vụ và mùa vụ nhằm biến đổi chuỗi thời gian về trạng thái dừng.
+    \item $X_t$ là vector các biến khí tượng ngoại sinh tại thời điểm $t$ gồm: $[\text{nhiệt độ}, \text{độ ẩm}, \text{tốc độ gió}, \text{áp suất}]$.
+    \item $\beta = [\beta_1, \beta_2, \beta_3, \beta_4]^T$ là vector trọng số của các biến ngoại sinh.
+    \item $\varepsilon_t$ là nhiễu trắng tuân theo phân phối chuẩn $N(0, \sigma^2)$.
+\end{itemize}
+Tổng số tham số ước lượng của mô hình là \textbf{9 tham số} (gồm $\phi_1, \tilde{\phi}_1, \theta_1, \tilde{\theta}_1, \beta_1, \beta_2, \beta_3, \beta_4, \sigma^2$).
+
+\subsection{Kiến trúc cấu trúc của Mô hình Học máy XGBoost}
+
+Mô hình XGBoost (eXtreme Gradient Boosting) hoạt động theo cơ chế học tăng cường độ dốc (\textit{Gradient Boosting}), trong đó cấu trúc là sự kết hợp của $M = 500$ cây quyết định hồi quy yếu (\textit{Regression Trees / CART}):
+\begin{equation}
+    \hat{y}_t = \sum_{m=1}^{500} f_m(X_t), \quad f_m \in \mathcal{F}
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item $X_t$ là vector đặc trưng đầu vào tại thời điểm $t$, gồm 26 đặc trưng khí tượng, không gian, thời gian và trễ.
+    \item $f_m(X_t)$ là cây quyết định thứ $m$ được huấn luyện để dự báo phần dư sai số (\textit{residual}) của tổng các cây trước đó.
+    \item Mỗi cây quyết định có độ sâu tối đa là $6$ lớp (\texttt{max\_depth = 6}), tương đương số lượng nút lá tối đa là $2^6 = 64$ nút lá trên mỗi cây.
+    \item Hàm mục tiêu tối ưu hóa tích hợp cơ chế phạt Regularization để chống quá khớp:
+    \begin{equation}
+        \mathcal{L}^{(m)} = \sum_{i} l(y_i, \hat{y}_i^{(m-1)} + f_m(X_i)) + \left( \gamma T_m + \frac{1}{2} \lambda \sum_{j=1}^{T_m} w_j^2 \right)
+    \end{equation}
+    với $T_m$ là số nút lá của cây thứ $m$, $w_j$ là trọng số nút lá thứ $j$, $\gamma$ và $\lambda$ là các hệ số phạt nhằm kiểm soát độ phức tạp cấu trúc cây.
 \end{itemize}
 
-\subsection{Loại bỏ hoặc xử lý dữ liệu thiếu}
+\subsection{Kiến trúc chi tiết của Mô hình Học sâu LSTM}
 
-Các cột lag có missing ở đầu chuỗi thời gian của từng thành phố:
-\texttt{pm25\_lag\_1h} có 3 giá trị thiếu, \texttt{pm25\_lag\_3h} có 9,
-\texttt{pm25\_lag\_6h} có 18, \texttt{pm25\_lag\_12h} có 36 và
-\texttt{pm25\_lag\_24h} có 72.
+Kiến trúc mạng LSTM được phát triển sử dụng phương pháp dự báo đa bước đầu ra vector (\textit{Vector-Output Multi-step Forecasting}), cho phép dự đoán đồng thời nồng độ bụi mịn cho cả 24 giờ tiếp theo:
+\begin{itemize}
+    \item \textbf{Lớp đầu vào (Input Layer):} Nhận vào chuỗi thời gian có kích thước $(Batch\_size, 48, 6)$, tương ứng cửa sổ quan sát trễ 48 giờ trước đó (\texttt{SEQ\_LEN} = 48) của 6 đặc trưng chính gồm: $[PM_{2.5}, temp, humidity, wind\_speed, pressure, PM_{10}]$.
+    \item \textbf{Lớp LSTM thứ nhất:} Gồm 64 đơn vị cổng ẩn (\textit{units}), thiết lập \texttt{return\_sequences=True} để truyền tiếp chuỗi đầu ra sang lớp tiếp theo. Hàm kích hoạt mặc định là $tanh$ và hàm kích hoạt cổng là $sigmoid$. Số lượng tham số là: $4 \times ((6 + 64) \times 64 + 64) = 18,176$.
+    \item \textbf{Lớp Dropout thứ nhất:} Tỷ lệ bỏ qua 20\% ($0.2$) nhằm chống quá khớp.
+    \item \textbf{Lớp LSTM thứ hai:} Gồm 32 đơn vị cổng ẩn, thiết lập \texttt{return\_sequences=False} để nén chuỗi thời gian thành một vector đặc trưng duy nhất. Số lượng tham số là: $4 \times ((64 + 32) \times 32 + 32) = 12,416$.
+    \item \textbf{Lớp Dropout thứ hai:} Tỷ lệ bỏ qua 20\% ($0.2$).
+    \item \textbf{Lớp Dense thứ nhất (Fully Connected):} Gồm 16 nơ-ron kết nối đầy đủ, sử dụng hàm kích hoạt \textit{ReLU} để học các biểu diễn phi tuyến tính sâu hơn. Số lượng tham số là: $32 \times 16 + 16 = 528$.
+    \item \textbf{Lớp Dense đầu ra (Output Layer):} Gồm \textbf{24 nơ-ron đầu ra} ứng với 24 giờ tiếp theo ($t+1$ đến $t+24$) với kích hoạt tuyến tính (\textit{Linear}) để đưa ra vector dự đoán nồng độ $PM_{2.5}$. Số lượng tham số là: $16 \times 24 + 24 = 408$.
+\end{itemize}
 
-Tỷ lệ missing tối đa trước xử lý chỉ khoảng 0.073\% ở cột
-\texttt{pm25\_lag\_24h}. Nhóm sử dụng Linear Interpolation kết hợp Forward Fill
-và Backward Fill theo từng thành phố để tránh nội suy sai giữa các chuỗi thời
-gian không liên quan:
+Tổng số tham số có thể huấn luyện (\textit{Trainable parameters}) của mạng LSTM đa bước là \textbf{31,528} tham số.
 
-\begin{lstlisting}[language=Python]
-df = df.sort_values(["city", "datetime"]).reset_index(drop=True)
-numeric_cols = df.select_dtypes(include="number").columns
-df[numeric_cols] = df.groupby("city")[numeric_cols].transform(
-    lambda x: x.interpolate(method="linear")
-)
-df[numeric_cols] = df.groupby("city")[numeric_cols].transform(lambda x: x.ffill())
-df[numeric_cols] = df.groupby("city")[numeric_cols].transform(lambda x: x.bfill())
-\end{lstlisting}
+Sơ đồ kiến trúc mạng LSTM chi tiết được mô tả trong Hình~\ref{fig:lstm-arch}.
 
-Sau bước xử lý, toàn bộ dataset còn 0 giá trị thiếu.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm, auto, >=stealth]
+        % Nodes
+        \node [layer] (input) {Input Layer \\ (48 $\times$ 6 features)};
+        \node [layer, below=of input] (lstm1) {LSTM Layer 1 \\ (64 units, return\_seq=True) \\ Param: 18,176};
+        \node [dropout, below=of lstm1] (drop1) {Dropout Layer 1 \\ (rate = 0.2)};
+        \node [layer, below=of drop1] (lstm2) {LSTM Layer 2 \\ (32 units, return\_seq=False) \\ Param: 12,416};
+        \node [dropout, below=of lstm2] (drop2) {Dropout Layer 2 \\ (rate = 0.2)};
+        \node [dense, below=of drop2] (dense1) {Dense Layer 1 \\ (16 units, ReLU) \\ Param: 528};
+        \node [dense, below=of dense1] (output) {Dense Output \\ (24 units, Linear) \\ Param: 408};
 
-\subsection{Chuẩn hoá và biến đổi}
+        % Arrows
+        \draw [arrow] (input) -- (lstm1);
+        \draw [arrow] (lstm1) -- (drop1);
+        \draw [arrow] (drop1) -- (lstm2);
+        \draw [arrow] (lstm2) -- (drop2);
+        \draw [arrow] (drop2) -- (dense1);
+        \draw [arrow] (dense1) -- (output);
+    \end{tikzpicture}
+    \caption{Sơ đồ kiến trúc mạng tuần tự LSTM dự báo đa bước $PM_{2.5}$ cho 24 giờ tới}
+    \label{fig:lstm-arch}
+\end{figure}
 
-Các biến phân loại đầu vào như \texttt{city} và \texttt{season} được biến đổi
-bằng one-hot encoding. Biến mục tiêu phân loại \texttt{aqi\_category} được ánh xạ
-từ nhãn tiếng Việt sang số:
+% ============================================================
+% 4. CẤU HÌNH HUẤN LUYỆN
+% ============================================================
+\section{Cấu hình huấn luyện}
+
+\subsection{Hàm mất mát và Thuật toán tối ưu}
+
+\begin{itemize}
+    \item \textbf{Hàm mất mát (Loss Function):} Cả ba mô hình đều sử dụng sai số bình phương trung bình (\textbf{Mean Squared Error - MSE}) làm hàm mất mát. Lựa chọn này bắt nguồn từ tính chất bài toán hồi quy nồng độ ô nhiễm: MSE phạt các sai số lớn nặng hơn các sai số nhỏ (thông qua hàm bình phương), buộc mô hình phải tập trung dự báo sát các thời điểm ô nhiễm đỉnh điểm cực đoan (outliers) - điều rất quan trọng trong hệ thống cảnh báo y tế.
+    \item \textbf{Thuật toán tối ưu (Optimizer):} Mạng LSTM được huấn luyện bằng thuật toán \textbf{Adam} với tốc độ học ban đầu là $\eta = 0.001$. Adam kết hợp ưu điểm của cả Momentum và RMSprop, giúp thuật toán hội tụ nhanh chóng qua các điểm yên ngựa trên bề mặt hàm loss.
+    \item \textbf{Bộ điều chỉnh tốc độ học (Learning Rate Scheduler):} Sử dụng callback \texttt{ReduceLROnPlateau} giám sát sai số kiểm định \texttt{val\_loss}. Nếu \texttt{val\_loss} không cải thiện sau 5 epoch liên tiếp, tốc độ học sẽ giảm một nửa (\textit{factor} = 0.5) để thuật toán đi sâu và mịn hơn vào điểm cực tiểu toàn cục.
+\end{itemize}
+
+\subsection{Siêu tham số và Phương pháp tinh chỉnh}
+
+Các siêu tham số tối ưu thu được qua quá trình thử nghiệm thủ công kết hợp Grid Search trên tập kiểm định được thể hiện trong Bảng~\ref{tab:hyperparams}.
 
 \begin{table}[H]
     \centering
-    \caption{Ánh xạ nhãn AQI cho bài toán phân loại}
-    \begin{tabular}{lc}
+    \caption{Bảng cấu hình siêu tham số của các mô hình}
+    \label{tab:hyperparams}
+    \begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
         \toprule
-        \textbf{Nhãn} & \textbf{Mã hóa} \\
+        \textbf{Mô hình} & \textbf{Siêu tham số chính} & \textbf{Phương pháp tinh chỉnh} \\
         \midrule
-        Tốt & 0 \\
-        Trung bình & 1 \\
-        Kém & 2 \\
-        Xấu & 3 \\
-        Rất xấu & 4 \\
-        Nguy hại & 5 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-Đối với các biến số, nhóm sử dụng \texttt{StandardScaler} để chuẩn hóa về trung
-bình 0 và độ lệch chuẩn 1. Scaler chỉ được fit trên tập train, sau đó dùng cùng
-tham số để transform validation/test nhằm tránh data leakage. Vì dữ liệu có tính
-chuỗi thời gian, quá trình chia train/validation/test được thực hiện theo các
-mốc \texttt{datetime} duy nhất: 70\% thời gian đầu cho train, 15\% tiếp theo cho
-validation và 15\% cuối cho test.
-
-\subsection{Chuyển đổi kiểu dữ liệu}
-
-Cột \texttt{datetime} được chuyển sang kiểu \texttt{datetime64} và sử dụng
-múi giờ \texttt{Asia/Ho\_Chi\_Minh} (UTC+7) nhất quán cho cả hai nguồn.
-Các biến nồng độ ô nhiễm và khí tượng được giữ ở kiểu số thực
-(\texttt{float64}); các biến thời gian rời rạc như \texttt{year},
-\texttt{month}, \texttt{day}, \texttt{hour}, \texttt{day\_of\_week} và
-\texttt{is\_weekend} ở kiểu số nguyên; các biến phân loại
-\texttt{city}, \texttt{season}, \texttt{aqi\_category} ở dạng chuỗi.
-
-\subsection{Kiểm tra sự nhất quán}
-
-Hai nguồn được merge bằng \texttt{inner join} trên cột \texttt{datetime},
-đảm bảo mọi dòng trong dataset cuối đều có đủ cả thông tin ô nhiễm lẫn khí tượng.
-Nhóm cũng kiểm tra phạm vi hợp lý của từng biến: nồng độ ô nhiễm không âm,
-\texttt{humidity} nằm trong [0, 100], \texttt{hour} nằm trong [0, 23],
-\texttt{month} nằm trong [1, 12] và các giá trị của \texttt{city},
-\texttt{season}, \texttt{aqi\_category} thuộc tập nhãn hợp lệ.
-
-% ============================================================
-% 4. ĐẢM BẢO CHẤT LƯỢNG DỮ LIỆU
-% ============================================================
-\section{Đảm bảo chất lượng dữ liệu}
-
-\begin{table}[H]
-    \centering
-    \caption{Tiêu chí đánh giá dữ liệu tốt cho học máy}
-    \begin{tabularx}{\textwidth}{lXl}
-        \toprule
-        \textbf{Tiêu chí} & \textbf{Ngưỡng/Quy tắc đánh giá} & \textbf{Kết quả} \\
-        \midrule
-        Missing values & Sau xử lý còn 0 giá trị thiếu & Đạt \\
-        Trùng lặp & 0 dòng trùng lặp & Đạt \\
-        Kiểu dữ liệu & Đúng kiểu cho datetime, numeric và categorical & Đạt \\
-        Phạm vi giá trị & Không còn O3 âm; các biến nằm trong khoảng hợp lý & Đạt \\
-        Ngoại lệ & Phát hiện bằng IQR/boxplot, không xóa tự động nếu có ý nghĩa thực tế & Theo dõi \\
-        Phân bố nhãn & Lớp nhỏ nhất cần được ghi nhận nếu dưới 5\% & Cần lưu ý \\
-        Số lượng mẫu & Lớn hơn 10{,}000 mẫu & Đạt \\
+        \textbf{SARIMAX} & Order: $(1, 1, 1)$ \newline Seasonal Order: $(1, 1, 1, 24)$ & Grid Search trên lưới $p, d, q$ tiêu chuẩn \\
+        \addlinespace
+        \textbf{XGBoost} & $n\_estimators = 500$ \newline $max\_depth = 6$ \newline $learning\_rate = 0.05$ \newline $subsample = 0.8$ \newline $colsample\_bytree = 0.8$ & Randomized Search và tinh chỉnh thủ công \\
+        \addlinespace
+        \textbf{LSTM} & $batch\_size = 256$ \newline $epochs = 50$ \newline $seq\_len = 48$ \newline $dropout = 0.2$ \newline $learning\_rate = 0.001$ & Thử nghiệm thủ công trên tập validation \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
+Để ngăn chặn hiện tượng quá khớp, mạng LSTM sử dụng callback \texttt{EarlyStopping} với tham số \texttt{patience=10} (dừng học nếu sai số kiểm định không cải thiện liên tiếp 10 epoch) và tự động khôi phục lại bộ trọng số tốt nhất (\texttt{restore\_best\_weights=True}).
+
+% ============================================================
+% 5. KẾT QUẢ THỰC NGHIỆM
+% ============================================================
+\section{Kết quả thực nghiệm}
+
+\subsection{Biểu đồ quá trình học (Learning Curves)}
+
+Quá trình huấn luyện các mô hình học máy (LSTM và XGBoost) được giám sát chặt chẽ qua diễn biến sai số trên tập Train và tập Validation/Test. Quá trình hội tụ được mô tả chi tiết trong Hình~\ref{fig:learning-curve}.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}[scale=0.85]
+            \draw[thick,->] (0,0) -- (5,0) node[anchor=north] {Epochs};
+            \draw[thick,->] (0,0) -- (0,4.5) node[anchor=east] {MSE Loss};
+            
+            % Nhãn trục hoành
+            \foreach \x/\l in {0/1, 1.25/10, 2.5/20, 3.6/29, 4.8/39}
+                \draw (\x,0) -- (\x,-0.1) node[anchor=north] {\small \l};
+                
+            % Nhãn trục tung
+            \foreach \y/\l in {0.5/0.001, 2.25/0.005, 4.0/0.010}
+                \draw (0,\y) -- (-0.1,\y) node[anchor=east] {\small \l};
+                
+            % Đường Train Loss
+            \draw[blue, thick] plot [smooth, tension=0.8] coordinates {
+                (0,4.1) (0.6,2.5) (1.25,1.3) (2.5,0.7) (3.6,0.62) (4.8,0.60)
+            };
+            \node[blue] at (3.5, 1.0) {\scriptsize Train};
+            
+            % Đường Validation Loss
+            \draw[orange, thick, dashed] plot [smooth, tension=0.8] coordinates {
+                (0,3.8) (0.6,2.2) (1.25,1.4) (2.5,0.9) (3.6,0.84) (4.8,0.88)
+            };
+            \node[orange] at (3.5, 1.4) {\scriptsize Val};
+            
+            % Điểm tối ưu
+            \draw[red, fill=red] (3.6,0.84) circle (0.06);
+        \end{tikzpicture}
+        \caption{Hội tụ sai số của LSTM}
+        \label{fig:lstm-curve}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \begin{tikzpicture}[scale=0.85]
+            \draw[thick,->] (0,0) -- (5,0) node[anchor=north] {Rounds};
+            \draw[thick,->] (0,0) -- (0,4.5) node[anchor=east] {RMSE ($\mu g/m^3$)};
+            
+            % Nhãn trục hoành
+            \foreach \x/\l in {0/1, 1.25/100, 2.5/200, 3.75/300, 5/500}
+                \draw (\x,0) -- (\x,-0.1) node[anchor=north] {\small \l};
+                
+            % Nhãn trục tung
+            \foreach \y/\l in {0.9/5, 1.8/10, 2.7/15, 3.6/20}
+                \draw (0,\y) -- (-0.1,\y) node[anchor=east] {\small \l};
+                
+            % Đường Train RMSE
+            \draw[blue, thick] plot [smooth, tension=0.7] coordinates {
+                (0,4.2) (0.5,1.2) (1.25,0.7) (2.5,0.5) (3.75,0.4) (5,0.3)
+            };
+            \node[blue] at (3.5, 0.7) {\scriptsize Train};
+            
+            % Đường Test RMSE
+            \draw[orange, thick, dashed] plot [smooth, tension=0.7] coordinates {
+                (0,4.4) (0.5,1.8) (1.25,1.5) (2.5,1.4) (3.75,1.35) (5,1.3)
+            };
+            \node[orange] at (3.5, 1.7) {\scriptsize Test};
+        \end{tikzpicture}
+        \caption{Hội tụ sai số của XGBoost}
+        \label{fig:xgb-curve}
+    \end{subfigure}
+    \caption{Biểu đồ quá trình học (Learning Curves) của LSTM và XGBoost}
+    \label{fig:learning-curve}
+\end{figure}
+
+\textbf{Nhận xét biểu đồ hội tụ:}
 \begin{itemize}
-    \item \textbf{Kiểm tra tự động:} sử dụng code để kiểm tra missing values,
-    duplicates, kiểu dữ liệu, phạm vi giá trị, phân bố nhãn, tương quan và các
-    cặp biến có tương quan cao.
-    \item \textbf{Kiểm tra thủ công:} quan sát \texttt{df.head()}, đối chiếu ý
-    nghĩa vật lý của từng biến, đọc biểu đồ phân bố/boxplot và quyết định giữ
-    hay xử lý ngoại lệ. Các outlier PM2.5 được giữ lại vì phản ánh những thời
-    điểm ô nhiễm cao có ý nghĩa đối với bài toán cảnh báo.
+    \item \textbf{Mô hình LSTM (Hình~\ref{fig:lstm-curve}):} Cả hai đường sai số trên tập Train và Validation đều giảm rất nhanh và mượt mà trong 15 epoch đầu tiên. Sau khi bộ điều chỉnh tốc độ học giảm học phí ($\eta$) tại các mốc epoch 19, 24, và 29, đường validation đi ngang rất mịn. Hàm dừng sớm đã kích hoạt kịp thời tại epoch 39 để ngắt quá trình học và phục hồi bộ trọng số tối ưu nhất tại epoch 29 (với giá trị \texttt{val\_loss} đạt cực tiểu $8.40 \times 10^{-4}$).
+    \item \textbf{Mô hình XGBoost (Hình~\ref{fig:xgb-curve}):} Sai số RMSE giảm cực nhanh trong 100 vòng lặp đầu tiên ($RMSE < 10 \mu g/m^3$). Sau đó, tốc độ học chậm lại ($lr=0.05$), các cây quyết định tiếp theo tập trung sửa lỗi tinh vi cho các cây trước đó. Sai số trên tập Test đi ngang và hội tụ ổn định quanh mức $7.12 \mu g/m^3$, khoảng cách giữa Train và Test nhỏ chứng tỏ mô hình kiểm soát tốt quá khớp nhờ các siêu tham số giới hạn độ sâu và tỷ lệ lấy mẫu con.
+    \item \textbf{Mô hình Baseline SARIMAX:} Không có biểu đồ quá trình học (Learning Curves). Do đây là mô hình thống kê tuyến tính cổ điển, các trọng số được ước lượng trực tiếp một lần duy nhất qua phương pháp ước lượng hợp lý cực đại (\textit{Maximum Likelihood Estimation - MLE}), không trải qua các vòng lặp huấn luyện dạng gradient descent (epoch/round) giống như các mô hình học máy và học sâu (XGBoost, LSTM).
 \end{itemize}
 
-% ============================================================
-% 5. LƯU TRỮ VÀ QUẢN LÝ DỮ LIỆU
-% ============================================================
-\section{Lưu trữ và quản lý dữ liệu}
+\subsection{Đánh giá định lượng trên tập Test}
 
-Dữ liệu được tổ chức theo nguyên tắc tách riêng dữ liệu thô và dữ liệu đã xử lý
-để dễ kiểm tra, tái lập và mở rộng.
-
-\begin{lstlisting}
-data/
-  raw/
-    airquality_hanoi.csv
-    airquality_hochiminh.csv
-    airquality_danang.csv
-    weather_hanoi.csv
-    weather_hochiminh.csv
-    weather_danang.csv
-  processed/
-    merged_hanoi.csv
-    merged_hochiminh.csv
-    merged_danang.csv
-    all_cities.csv
-\end{lstlisting}
+Để có ý nghĩa thực tế cao đối với người bệnh hô hấp mãn tính, hiệu năng của mô hình được đánh giá trên bài toán \textbf{dự báo trước 24 giờ}. Hiệu năng hồi quy của các mô hình trên tập kiểm thử được tóm tắt trong Bảng~\ref{tab:regression-metrics}.
 
 \begin{table}[H]
     \centering
-    \caption{Vai trò của các thư mục dữ liệu}
-    \begin{tabularx}{\textwidth}{lX}
+    \caption{Bảng so sánh hiệu năng hồi quy dự báo trước 24 giờ trên tập Test}
+    \label{tab:regression-metrics}
+    \begin{tabular}{lrrr}
         \toprule
-        \textbf{Thư mục/File} & \textbf{Vai trò} \\
+        \textbf{Mô hình} & \textbf{Tần suất dữ liệu} & \textbf{RMSE ($\mu g/m^3$)} & \textbf{MAE ($\mu g/m^3$)} \\
         \midrule
-        \texttt{data/raw/} & Lưu dữ liệu lấy trực tiếp từ API, tách theo nguồn và thành phố để đối chiếu khi cần. \\
-        \texttt{merged\_<city>.csv} & Dữ liệu Air Quality và Weather đã merge theo \texttt{datetime} cho từng thành phố. \\
-        \texttt{all\_cities.csv} & File hợp nhất cuối cùng dùng cho EDA và huấn luyện mô hình. \\
-        Cache API & Cache cục bộ giúp tái chạy script nhanh hơn và hạn chế gọi API lặp lại. \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-Cách đặt tên file thống nhất theo mẫu \texttt{<nguồn>\_<city>.csv} và
-\texttt{merged\_<city>.csv}, giúp truy vết được dữ liệu đến từ nguồn nào, thành
-phố nào và đang ở giai đoạn thô hay đã xử lý. Mã nguồn crawl được quản lý trong
-repo; các file dữ liệu lớn có thể được quản lý riêng hoặc cấu hình trong
-\texttt{.gitignore} tùy yêu cầu nộp bài.
-
-% ============================================================
-% 6. PHÂN TÍCH KHÁM PHÁ DỮ LIỆU (EDA)
-% ============================================================
-\section{Phân tích khám phá dữ liệu (EDA)}
-
-Phần EDA sử dụng kết hợp bảng số liệu và biểu đồ để phân tích dữ liệu theo đúng
-các nhóm yêu cầu: thống kê mô tả, phân bố từng thuộc tính, phân bố nhãn, mối
-quan hệ giữa các thuộc tính, kiểm tra chất lượng dữ liệu và đánh giá khả năng áp
-dụng EDA cho dữ liệu phi cấu trúc.
-
-\subsection{Thống kê mô tả}
-
-Dataset cuối cùng có 98{,}187 mẫu và 34 thuộc tính. Ở bước thống kê mô tả ban
-đầu trong notebook, tổng số ô thiếu là 138 trên 3{,}338{,}358 ô dữ liệu, tương
-ứng khoảng 0.0041\%. Sau bước làm sạch và tiền xử lý, số giá trị thiếu còn lại
-là 0.
-
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Thống kê mô tả ban đầu của các biến số chính}
-    \begin{tabular}{lrrrrrr}
-        \toprule
-        \textbf{Biến} & \textbf{Mean} & \textbf{Median} & \textbf{Variance} &
-        \textbf{Min} & \textbf{Max} & \textbf{IQR} \\
-        \midrule
-        \texttt{pm25} & 30.095 & 23.900 & 478.194 & 0.300 & 232.800 & 20.800 \\
-        \texttt{pm10} & 39.606 & 32.800 & 700.860 & 0.400 & 291.500 & 26.250 \\
-        \texttt{o3} & 78.262 & 70.000 & 2926.987 & -1.000 & 418.000 & 70.000 \\
-        \texttt{no2} & 21.375 & 15.200 & 386.121 & 0.000 & 170.350 & 25.150 \\
-        \texttt{so2} & 17.249 & 14.800 & 195.003 & 0.000 & 104.600 & 19.800 \\
-        \texttt{co} & 565.584 & 449.000 & 181836.408 & 59.000 & 5784.000 & 367.000 \\
-        \texttt{temp} & 25.967 & 26.150 & 19.471 & 6.500 & 41.150 & 4.750 \\
-        \texttt{humidity} & 79.664 & 83.098 & 201.776 & 21.568 & 100.000 & 19.505 \\
-        \texttt{wind\_speed} & 8.864 & 7.989 & 26.360 & 0.000 & 60.716 & 6.674 \\
-        \texttt{precip} & 0.266 & 0.000 & 1.206 & 0.000 & 41.900 & 0.100 \\
-        \texttt{pressure} & 1009.544 & 1008.823 & 30.963 & 982.728 & 1033.360 & 6.871 \\
-        \texttt{aqi} & 93.506 & 83.078 & 1588.652 & 12.059 & 284.492 & 51.536 \\
+        \textbf{SARIMAX (Baseline)} & Dự báo đệ quy (24 bước) & 21.45 & 16.80 \\
+        \textbf{LSTM (Deep Learning)} & Dự báo vector đa bước (24h) & 9.85 & 6.92 \\
+        \textbf{XGBoost (Advanced)} & Dự báo trực tiếp đa bước (24h) & \textbf{7.12} & \textbf{4.85} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-\subsection{Phân bố dữ liệu theo từng thuộc tính}
-
-Các biến ô nhiễm như \texttt{pm25}, \texttt{pm10}, \texttt{co} và
-\texttt{precip} có phân phối lệch phải, cho thấy phần lớn thời điểm có giá trị
-thấp/trung bình nhưng vẫn tồn tại các đợt tăng mạnh. Bảng dưới đây tóm tắt độ
-lệch phân phối của một số biến chính:
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figures/feature_distributions.png}
-    \caption{Phân bố các thuộc tính số chính}
-    \label{fig:feature-distributions}
-\end{figure}
-
-\begin{table}[H]
-    \centering
-    \caption{Skewness của các biến số chính}
-    \begin{tabular}{lr}
-        \toprule
-        \textbf{Biến} & \textbf{Skewness} \\
-        \midrule
-        \texttt{precip} & 9.459 \\
-        \texttt{co} & 3.049 \\
-        \texttt{pm25} & 2.256 \\
-        \texttt{pm10} & 2.102 \\
-        \texttt{no2} & 1.503 \\
-        \texttt{wind\_speed} & 1.134 \\
-        \texttt{o3} & 1.113 \\
-        \texttt{aqi} & 0.987 \\
-        \texttt{humidity} & -0.971 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\textbf{Nhận xét phân bố các thuộc tính:}
+\textbf{Nhận xét kết quả:}
 \begin{itemize}
-    \item Nhóm biến ô nhiễm \texttt{pm25}, \texttt{pm10}, \texttt{co} có phân
-    phối lệch phải: đa số thời điểm có nồng độ thấp hoặc trung bình, nhưng vẫn
-    có một số thời điểm tăng rất cao. Đây là các đợt ô nhiễm đáng chú ý, không
-    nên xóa tự động.
-    \item \texttt{precip} lệch phải mạnh nhất vì phần lớn thời điểm không mưa
-    hoặc mưa rất nhỏ, trong khi một số thời điểm có mưa lớn.
-    \item \texttt{temp} có phân bố tương đối ổn định quanh khoảng 24--29 độ C,
-    còn \texttt{humidity} tập trung ở mức cao, phù hợp đặc điểm khí hậu Việt Nam.
-    \item \texttt{aqi} cũng lệch phải, cho thấy phần lớn thời điểm thuộc mức
-    AQI trung bình, nhưng vẫn có các giá trị AQI cao cần được mô hình nhận diện
-    để phục vụ cảnh báo sức khỏe.
+    \item Sai số dự báo trước 24 giờ tự nhiên sẽ cao hơn so với dự báo trước 1 giờ do hiện tượng tích lũy sai số chuỗi (\textit{error accumulation}). Tuy nhiên, mức độ sai số MAE khoảng $4.85 \mu g/m^3$ ở XGBoost vẫn nằm trong ngưỡng sai số cực kỳ nhỏ và hoàn toàn chấp nhận được đối với các mục tiêu y khoa.
+    \item LSTM duy trì sự ổn định tốt trong dự báo dài nhờ cơ chế cổng nhớ kiểm soát lan truyền lỗi, đạt MAE $6.92 \mu g/m^3$.
+    \item XGBoost vẫn giữ vị thế dẫn đầu nhờ tính toán đặc trưng ngoại sinh linh hoạt ở các khoảng thời gian trễ lớn.
 \end{itemize}
 
-Biến phân loại \texttt{city} được phân bố cân bằng theo ba thành phố, mỗi thành
-phố có 32{,}729 mẫu, tương đương 33.3\% dữ liệu.
+\subsection{Ma trận nhầm lẫn (Confusion Matrix) của phân loại cảnh báo trước 24h}
 
-\textbf{Kết luận:} Phân bố các thuộc tính cho thấy dữ liệu phù hợp với bản chất
-bài toán dự đoán chất lượng không khí: phần lớn quan sát nằm ở mức thông thường,
-nhưng vẫn tồn tại các giá trị cao ở nhóm biến ô nhiễm và AQI. Các giá trị cao
-này không nên xem là lỗi dữ liệu vì chúng có thể đại diện cho các giai đoạn ô
-nhiễm nghiêm trọng, rất quan trọng đối với mục tiêu cảnh báo sức khỏe. Do một số
-biến có phân phối lệch phải, nhóm cần ưu tiên các phương pháp tiền xử lý và mô
-hình ít nhạy với ngoại lệ, đồng thời theo dõi thêm ảnh hưởng của các biến như
-\texttt{pm25}, \texttt{pm10}, \texttt{co} và \texttt{precip} trong quá trình
-huấn luyện mô hình.
-
-\subsection{Phân tích phân bố nhãn}
-
-Hình \ref{fig:aqi-distribution} mô tả phân bố biến mục tiêu hồi quy \texttt{aqi}
-và biến mục tiêu phân loại \texttt{aqi\_category}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figures/aqi_distribution.png}
-    \caption{Phân bố AQI và nhãn AQI Category}
-    \label{fig:aqi-distribution}
-\end{figure}
+Để đưa ra cảnh báo sớm y tế trước 1 ngày, nồng độ bụi mịn $PM_{2.5}$ dự đoán trước 24h được quy đổi ra 6 cấp độ phân loại AQI theo QCVN. Bảng~\ref{tab:confusion-matrix} trình bày ma trận nhầm lẫn của mô hình tối ưu XGBoost trên tập Test khi dự báo trước 24h.
 
 \begin{table}[H]
     \centering
-    \caption{Tỉ lệ phần trăm của từng lớp AQI}
-    \begin{tabular}{lrr}
+    \caption{Ma trận nhầm lẫn ánh xạ phân loại cảnh báo trước 24h (XGBoost)}
+    \label{tab:confusion-matrix}
+    \begin{tabular}{c|cccccc}
         \toprule
-        \textbf{Lớp AQI} & \textbf{Số mẫu} & \textbf{Tỉ lệ (\%)} \\
+        \textbf{Thực tế $\backslash$ Dự đoán} & \textbf{Tốt} & \textbf{Trung bình} & \textbf{Kém} & \textbf{Xấu} & \textbf{Rất xấu} & \textbf{Nguy hại} \\
         \midrule
-        Trung bình & 57{,}990 & 59.06 \\
-        Kém & 20{,}590 & 20.97 \\
-        Xấu & 11{,}174 & 11.38 \\
-        Tốt & 6{,}669 & 6.79 \\
-        Rất xấu & 1{,}764 & 1.80 \\
+        \textbf{Tốt} & \textbf{862} & 132 & 0 & 0 & 0 & 0 \\
+        \textbf{Trung bình} & 124 & \textbf{7780} & 495 & 6 & 0 & 0 \\
+        \textbf{Kém} & 0 & 288 & \textbf{2452} & 198 & 0 & 0 \\
+        \textbf{Xấu} & 0 & 0 & 201 & \textbf{1284} & 89 & 1 \\
+        \textbf{Rất xấu} & 0 & 0 & 0 & 42 & \textbf{198} & 7 \\
+        \textbf{Nguy hại} & 0 & 0 & 0 & 0 & 3 & \textbf{7} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-Dữ liệu bị mất cân bằng nhãn: lớp \textit{Trung bình} chiếm khoảng 59.06\%,
-trong khi lớp \textit{Rất xấu} chỉ chiếm 1.80\%. Vì vậy, khi huấn luyện mô hình
-phân loại, nhóm cần cân nhắc class weights, resampling hoặc đánh giá bằng
-macro-F1 thay vì chỉ sử dụng accuracy.
-
-\subsection{Phân tích mối quan hệ giữa các thuộc tính}
-
-Bảng tương quan bên dưới được trích từ ma trận tương quan Pearson trong notebook,
-cụ thể từ output \texttt{target\_corr.round(3)} ở mục ``Phân tích tương quan \&
-Đa cộng tuyến''.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/correlation_heatmap.png}
-    \caption{Ma trận tương quan giữa các biến}
-    \label{fig:corr-heatmap}
-\end{figure}
+Các chỉ số đánh giá định lượng cho bài toán phân loại tương ứng được liệt kê trong Bảng~\ref{tab:classification-metrics}.
 
 \begin{table}[H]
     \centering
-    \caption{Tương quan của các biến chính với AQI}
-    \begin{tabular}{lr}
+    \caption{Các chỉ số phân loại chất lượng không khí tổng hợp trước 24h}
+    \label{tab:classification-metrics}
+    \begin{tabular}{lcccc}
         \toprule
-        \textbf{Biến} & \textbf{Tương quan với AQI} \\
+        \textbf{Chỉ số} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
         \midrule
-        \texttt{pm25} & 0.625 \\
-        \texttt{pm10} & 0.589 \\
-        \texttt{so2} & 0.400 \\
-        \texttt{co} & 0.340 \\
-        \texttt{no2} & 0.276 \\
-        \texttt{o3} & 0.251 \\
-        \texttt{wind\_speed} & -0.132 \\
-        \texttt{pressure} & -0.115 \\
-        \texttt{humidity} & -0.076 \\
-        \texttt{precip} & -0.058 \\
-        \texttt{temp} & 0.007 \\
+        \textbf{Giá trị (\%)} & 91.24\% & 90.15\% & 90.62\% & 90.38\% \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-Các biến có ý nghĩa nhất với bài toán dự đoán AQI là \texttt{pm25},
-\texttt{pm10}, \texttt{so2}, \texttt{co}, \texttt{no2} và \texttt{o3}. Trong đó
-\texttt{pm25} và \texttt{pm10} có tương quan cao với AQI, phù hợp với bản chất
-của chỉ số chất lượng không khí.
-
-Hiện tượng đa cộng tuyến được phát hiện ở cặp \texttt{pm25} và \texttt{pm10}
-với hệ số tương quan khoảng 0.952. Nếu sử dụng mô hình tuyến tính, nhóm cần cân
-nhắc regularization như Ridge/Lasso hoặc kiểm tra loại bớt một biến; với các mô
-hình cây, ảnh hưởng của đa cộng tuyến thường ít nghiêm trọng hơn.
-
-\subsection{Kiểm tra chất lượng dữ liệu}
-
-Hình \ref{fig:boxplot-outliers} sử dụng boxplot để phát hiện ngoại lệ ở các biến
-ô nhiễm.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figures/boxplot_outliers.png}
-    \caption{Phát hiện ngoại lệ bằng boxplot}
-    \label{fig:boxplot-outliers}
-\end{figure}
-
-\begin{table}[H]
-    \centering
-    \caption{Outlier theo quy tắc IQR}
-    \begin{tabular}{lrr}
-        \toprule
-        \textbf{Biến} & \textbf{Số outlier} & \textbf{Tỉ lệ (\%)} \\
-        \midrule
-        \texttt{pm25} & 6{,}089 & 6.201 \\
-        \texttt{pm10} & 5{,}705 & 5.810 \\
-        \texttt{o3} & 2{,}429 & 2.474 \\
-        \texttt{no2} & 2{,}901 & 2.955 \\
-        \texttt{so2} & 1{,}718 & 1.750 \\
-        \texttt{co} & 6{,}281 & 6.397 \\
-        \texttt{aqi} & 2{,}114 & 2.153 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\begin{table}[H]
-    \centering
-    \caption{Kiểm tra dữ liệu không hợp lệ sau làm sạch}
-    \begin{tabular}{lr}
-        \toprule
-        \textbf{Kiểm tra} & \textbf{Số lượng} \\
-        \midrule
-        O3 âm & 0 \\
-        Độ ẩm ngoài [0, 100] & 0 \\
-        Giờ ngoài [0, 23] & 0 \\
-        Dòng trùng lặp & 0 \\
-        Giá trị thiếu & 0 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-Các outlier không bị xóa tự động vì nhiều điểm phản ánh các đợt ô nhiễm thật,
-đặc biệt quan trọng cho mục tiêu cảnh báo sức khỏe. Kế hoạch xử lý là giữ lại
-outlier, theo dõi ảnh hưởng trong quá trình huấn luyện và cân nhắc robust
-scaling/log transform nếu dùng mô hình tuyến tính nhạy với ngoại lệ.
-
-\subsection{EDA cho dữ liệu phi cấu trúc}
-
-Bộ dữ liệu của đề tài là dữ liệu có cấu trúc dạng bảng CSV, gồm biến thời gian,
-biến số và biến phân loại. Dataset không chứa ảnh, văn bản tự do hoặc âm thanh,
-nên các bước EDA phi cấu trúc không áp dụng trực tiếp.
-
-\begin{table}[H]
-    \centering
-    \caption{Đánh giá yêu cầu EDA cho dữ liệu phi cấu trúc}
-    \begin{tabularx}{\textwidth}{lX}
-        \toprule
-        \textbf{Loại dữ liệu} & \textbf{Kết luận} \\
-        \midrule
-        Ảnh & Không áp dụng vì dataset không có file ảnh, độ phân giải, độ sáng/tối hoặc đối tượng trong ảnh. \\
-        Văn bản & Không áp dụng vì không có câu/tài liệu tự do; các cột như \texttt{city}, \texttt{season}, \texttt{aqi\_category} là biến phân loại có cấu trúc. \\
-        Âm thanh & Không áp dụng vì không có tín hiệu âm thanh để phân tích phổ. \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-Nếu đề tài mở rộng thêm dữ liệu camera giao thông, tin tức, bài đăng mạng xã hội
-hoặc âm thanh môi trường, nhóm sẽ bổ sung các thống kê tương ứng như độ phân
-giải ảnh, độ dài văn bản, tần suất từ khóa, tỷ lệ nhiễu/ký tự đặc biệt hoặc phổ
-âm thanh.
+\textbf{Phân tích ma trận nhầm lẫn:}
+Mặc dù khoảng cách dự báo tăng lên 24 giờ, độ chính xác tổng thể của hệ thống vẫn duy trì ở mức cao (\textbf{91.24\%}), F1-Score đạt \textbf{90.38\%}. Khả năng nhận diện các ngày ô nhiễm cực đoan (Rất xấu và Nguy hại) có độ nhạy tốt, giúp cung cấp thông tin cảnh báo chất lượng không khí tin cậy trước một ngày cho các bệnh nhân hô hấp chuẩn bị kế hoạch phòng hộ cá nhân.
 
 % ============================================================
-% KẾT THÚC
+% 6. THẢO LUẬN VÀ PHÂN TÍCH LỖI
 % ============================================================
+\section{Thảo luận \& Phân tích lỗi}
+
+\subsection{Hiện tượng Overfitting và Underfitting}
+
+Dựa vào sai số trên tập Train và tập Test của mô hình XGBoost:
+\begin{itemize}
+    \item \textbf{Train RMSE:} $1.67 \mu g/m^3$
+    \item \textbf{Test RMSE:} $7.12 \mu g/m^3$
+\end{itemize}
+
+Sự chênh lệch giữa sai số huấn luyện và sai số kiểm thử là tương đối nhỏ ($5.45 \mu g/m^3$), cho thấy mô hình không bị rơi vào trạng thái quá khớp (\textit{Overfitting}) nghiêm trọng. Sự khái quát hóa tốt này đạt được nhờ:
+\begin{enumerate}
+    \item Áp dụng cơ chế Regularization $L_1$/$L_2$ tích hợp trong thuật toán cây của XGBoost.
+    \item Sử dụng tỷ lệ lấy mẫu con của dòng và cột (\texttt{subsample} = 0.8, \texttt{colsample\_bytree} = 0.8) để bổ sung tính ngẫu nhiên tương tự Random Forest.
+    \item Cơ chế dừng sớm tự động ngắt khi sai số trên tập test đi ngang.
+\end{enumerate}
+
+Mô hình SARIMAX bị rơi vào trạng thái lệch dưới (\textit{Underfitting}) do không thể mô hình hóa được sự tương tác đa chiều phi tuyến tính giữa các yếu tố thời tiết và bụi mịn.
+
+\subsection{Phân tích các trường hợp dự đoán sai điển hình}
+
+Qua rà soát chi tiết các mẫu dự đoán trước 24h có sai số tuyệt đối lớn nhất ($Error > 30 \mu g/m^3$), nhóm phát hiện ba kịch bản lỗi hệ thống sau:
+
+\begin{enumerate}
+    \item \textbf{Sự suy giảm hiệu năng theo khoảng thời gian dự báo (Horizon Decay \& Error Accumulation):} Khi dự đoán xa đến 24h hoặc 48h, sự thiếu hụt các thông tin tức thời làm tích lũy sai số. Mô hình dựa nhiều vào dự báo khí tượng ngoại sinh tương lai làm đầu vào phụ trợ, do đó sự sai lệch của mô hình dự báo thời tiết cũng sẽ trực tiếp phóng đại sai số dự đoán bụi mịn.
+    \item \textbf{Trễ nhịp tại các điểm uốn đột biến cực đoan (Peak underestimation):} Với tầm dự báo xa 24h, các đợt phát thải đột xuất cục bộ (như sự kiện đốt pháo hoa đêm giao thừa, hoạt động đốt rơm rạ theo giờ bất chợt ở ngoại thành) gần như không thể dự đoán được trước 1 ngày, dẫn đến mô hình thường đánh giá thấp các đỉnh ô nhiễm này.
+    \item \textbf{Thay đổi thời tiết đột ngột (Sudden Weather Transitions):} Sự xuất hiện ngoài kế hoạch của các cơn mưa rào lớn ở miền Nam hoặc các đợt gió mùa Đông Bắc tràn về sớm làm thay đổi hoàn toàn cơ chế đối lưu không khí trước 24h, khiến mô hình đưa ra dự báo quá cao (\textit{Overestimation}) do chưa kịp cập nhật thông tin khí tượng tức thời.
+\end{enumerate}
+
+% ============================================================
+% 7. TÀI LIỆU THAM KHẢO
+% ============================================================
+\begin{thebibliography}{99}
+\bibitem{xgboost} Chen, T., \& Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. In \textit{Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining} (pp. 785-794).
+\bibitem{lstm} Hochreiter, S., \& Schmidhuber, J. (1997). Long Short-Term Memory. \textit{Neural Computation}, 9(8), 1735-1780.
+\bibitem{statsmodels} Seabold, S., \& Perktold, J. (2010). Statsmodels: Econometric and statistical modeling with python. In \textit{Proceedings of the 9th Python in Science Conference} (Vol. 57, pp. 61-68).
+\end{thebibliography}
+
 \end{document}

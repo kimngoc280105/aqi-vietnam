@@ -24,15 +24,16 @@ scaler = MinMaxScaler()
 data_scaled = scaler.fit_transform(df_lstm.values)
 
 SEQ_LEN = 48
+PRED_LEN = 24  # Dự đoán 24 tiếng tiếp theo
 
-def create_sequences(data, seq_len, target_idx=0):
+def create_sequences(data, seq_len, pred_len, target_idx=0):
     X, y = [], []
-    for i in range(len(data) - seq_len):
+    for i in range(len(data) - seq_len - pred_len + 1):
         X.append(data[i : i + seq_len])
-        y.append(data[i + seq_len, target_idx])
+        y.append(data[i + seq_len : i + seq_len + pred_len, target_idx])
     return np.array(X), np.array(y)
 
-X_all, y_all = create_sequences(data_scaled, SEQ_LEN)
+X_all, y_all = create_sequences(data_scaled, SEQ_LEN, PRED_LEN)
 split = int(len(X_all) * 0.8)
 X_train, X_test = X_all[:split], X_all[split:]
 y_train, y_test = y_all[:split], y_all[split:]
@@ -47,7 +48,7 @@ model_lstm = Sequential([
     LSTM(32, return_sequences=False),
     Dropout(0.2),
     Dense(16, activation='relu'),
-    Dense(1)
+    Dense(PRED_LEN)  # Đầu ra 24 nơ-ron cho 24 tiếng
 ])
 model_lstm.compile(optimizer='adam', loss='mse', metrics=['mae'])
 
@@ -59,9 +60,12 @@ print("y_pred_scaled shape:", y_pred_scaled.shape)
 print("y_test shape:", y_test.shape)
 
 def inverse_pm25(scaled_values, scaler, target_idx, n_features):
-    dummy = np.zeros((len(scaled_values), n_features))
+    # scaled_values có dạng (N, pred_len)
+    N, pred_len = scaled_values.shape
+    dummy = np.zeros((N * pred_len, n_features))
     dummy[:, target_idx] = scaled_values.flatten()
-    return scaler.inverse_transform(dummy)[:, target_idx]
+    inv = scaler.inverse_transform(dummy)[:, target_idx]
+    return inv.reshape(N, pred_len)
 
 try:
     y_pred_actual = inverse_pm25(y_pred_scaled, scaler, TARGET_IDX, len(FEATURES))
@@ -75,5 +79,6 @@ except Exception as e:
 
 rmse = np.sqrt(mean_squared_error(y_test_actual, y_pred_actual))
 mae  = mean_absolute_error(y_test_actual, y_pred_actual)
-print(f"RMSE: {rmse:.2f}, MAE: {mae:.2f}")
+print(f"LSTM 24h-ahead -> RMSE: {rmse:.2f}, MAE: {mae:.2f}")
+
 
