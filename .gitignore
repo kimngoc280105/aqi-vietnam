@@ -11,3 +11,21 @@ __pycache__/
 # Môi trường
 venv/
 .env
+node_modules/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+.pytest_cache/
+.tmp_ipython/
+.ipynb_checkpoints/
+tmp/
+tmp_notebook_runs/
+tmp_pdf_check/
+screenshots/
+*.log
+*.aux
+*.out
+*.toc
+
+# Reproducible large feature table; generated from all_cities.csv.
+data/processed/pm25_training_data_enriched.csv

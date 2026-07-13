@@ -1,0 +1,146 @@
+{
+  "selected_model": "XGBoost",
+  "selection_basis": {
+    "primary_metric": "validation RMSE",
+    "scope": "required SARIMAX/XGBoost/LSTM suite",
+    "candidates": [
+      "SARIMAX",
+      "XGBoost",
+      "LSTM"
+    ],
+    "selected_without_test_metrics": true,
+    "comparison_path": "models/results/original_model_suite_comparison.csv",
+    "selection_path": "models/results/original_model_suite_selection.json",
+    "validation_rmse_ug_m3": 18.155728033471178
+  },
+  "test_metrics_reproduced": {
+    "rmse_ug_m3": 16.042270822243232,
+    "mae_ug_m3": 10.285114813172548,
+    "r2": 0.5811863616973488,
+    "bias_ug_m3": 0.25381221315160546,
+    "bucket_accuracy": 0.7226650316779072,
+    "bucket_f1_macro": 0.3070754019923323,
+    "usg_plus_recall": 0.7596993210475267,
+    "usg_plus_precision": 0.6799045138888888,
+    "unhealthy_plus_recall": 0.5846072746441751,
+    "unhealthy_plus_precision": 0.6905354919053549
+  },
+  "test_rmse_improvement_vs_sarimax_pct": 2.2568294959940522,
+  "conformal_90_test_coverage": 0.9267661284828667,
+  "largest_drift_features": [
+    {
+      "feature": "pm25_pm10_ratio",
+      "train_mean": 0.6891048292599167,
+      "test_mean": 0.8917459314664142,
+      "train_std": 0.10372507132778858,
+      "test_std": 0.09683705225664802,
+      "standardized_mean_difference": 2.019540864082225
+    },
+    {
+      "feature": "day_cos",
+      "train_mean": 0.10010848480583177,
+      "test_mean": 0.5023400288527894,
+      "train_std": 0.692102820835829,
+      "test_std": 0.46411840128542897,
+      "standardized_mean_difference": 0.682625411314429
+    },
+    {
+      "feature": "month_sin",
+      "train_mean": -0.02926714522504928,
+      "test_mean": 0.3573137733326985,
+      "train_std": 0.7173806080780468,
+      "test_std": 0.6140881398617611,
+      "standardized_mean_difference": 0.578943906372995
+    },
+    {
+      "feature": "month_cos",
+      "train_mean": 0.10695166158561491,
+      "test_mean": 0.4087644213394249,
+      "train_std": 0.6878111585179799,
+      "test_std": 0.5728719918373254,
+      "standardized_mean_difference": 0.47683057929769856
+    },
+    {
+      "feature": "co",
+      "train_mean": 510.09468392683317,
+      "test_mean": 712.3262483820424,
+      "train_std": 379.060389704083,
+      "test_std": 531.8442653297518,
+      "standardized_mean_difference": 0.4379065688631984
+    },
+    {
+      "feature": "day_sin",
+      "train_mean": -0.054067425568546504,
+      "test_mean": 0.2462245160450915,
+      "train_std": 0.7127854032222244,
+      "test_std": 0.6867815514026664,
+      "standardized_mean_difference": 0.4290471729037021
+    },
+    {
+      "feature": "pressure",
+      "train_mean": 1009.8072426788127,
+      "test_mean": 1011.9916830512979,
+      "train_std": 5.635554965102387,
+      "test_std": 4.8313542207858555,
+      "standardized_mean_difference": 0.41617273624590134
+    },
+    {
+      "feature": "temp",
+      "train_mean": 25.882228421159684,
+      "test_mean": 24.581184004359965,
+      "train_std": 4.524078864706027,
+      "test_std": 4.410675571991536,
+      "standardized_mean_difference": -0.29120881649969654
+    },
+    {
+      "feature": "pm10",
+      "train_mean": 41.36992401458687,
+      "test_mean": 34.0472648000545,
+      "train_std": 26.823686628022223,
+      "test_std": 24.526995713169573,
+      "standardized_mean_difference": -0.2849171928246831
+    },
+    {
+      "feature": "no2_co_ratio",
+      "train_mean": 0.038409206068105516,
+      "test_mean": 0.03172039172541354,
+      "train_std": 0.025395175413624516,
+      "test_std": 0.022738597674355248,
+      "standardized_mean_difference": -0.2775037029124151
+    }
+  ],
+  "bootstrap_ci": [
+    {
+      "metric": "rmse_ug_m3",
+      "point_estimate": 16.0422708213085,
+      "ci_95_lower": 15.01867989431296,
+      "ci_95_upper": 17.138399285169353,
+      "bootstrap_unit": "target day",
+      "iterations": 600
+    },
+    {
+      "metric": "mae_ug_m3",
+      "point_estimate": 10.285114814258465,
+      "ci_95_lower": 9.725466219730743,
+      "ci_95_upper": 10.813042465121189,
+      "bootstrap_unit": "target day",
+      "iterations": 600
+    },
+    {
+      "metric": "r2",
+      "point_estimate": 0.5811863617461547,
+      "ci_95_lower": 0.5479486238280015,
+      "ci_95_upper": 0.6125182482147723,
+      "bootstrap_unit": "target day",
+      "iterations": 600
+    },
+    {
+      "metric": "bias_ug_m3",
+      "point_estimate": 0.25381221094761214,
+      "ci_95_lower": -0.6932405871888596,
+      "ci_95_upper": 1.0884436220734774,
+      "bootstrap_unit": "target day",
+      "iterations": 600
+    }
+  ]
+}

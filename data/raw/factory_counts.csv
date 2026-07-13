@@ -1,0 +1,10 @@
+﻿city_key,city,radius_m,factory_count
+hanoi,Hà Nội,2000,3
+hanoi,Hà Nội,5000,59
+hanoi,Hà Nội,10000,195
+hochiminh,TP.HCM,2000,4
+hochiminh,TP.HCM,5000,36
+hochiminh,TP.HCM,10000,114
+danang,Đà Nẵng,2000,1
+danang,Đà Nẵng,5000,12
+danang,Đà Nẵng,10000,39

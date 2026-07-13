@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "run_id": "snapshot-dc895f4e139f",
+  "created_at": "2026-07-11T05:59:24.962692+00:00",
+  "provenance_status": "retrospective manifest for the existing repository snapshot",
+  "start_date": "2022-08-05",
+  "end_date": "2026-05-09",
+  "coverage_statement": "One CAMS Global grid cell near each city centre. Values are modelled gridded estimates, not regulatory ground-station or district-level measurements.",
+  "sources": {
+    "air_quality": {
+      "provider": "Open-Meteo / Copernicus Atmosphere Monitoring Service (CAMS Global)",
+      "url": "https://air-quality-api.open-meteo.com/v1/air-quality",
+      "spatial_resolution": "0.4 degrees, approximately 45 km"
+    },
+    "weather": {
+      "provider": "Open-Meteo Historical Weather API",
+      "url": "https://archive-api.open-meteo.com/v1/archive"
+    },
+    "spatial_context": {
+      "provider": "OpenStreetMap contributors via Overpass API",
+      "url": "https://overpass-api.de/api/interpreter",
+      "interpretation": "Mapped industrial-object counts, not measured emissions"
+    }
+  },
+  "cities": {
+    "Hà Nội": {
+      "slug": "hanoi",
+      "latitude": 21.0245,
+      "longitude": 105.8412,
+      "coverage": "CAMS Global grid cell near the city centre",
+      "rows": 32969
+    },
+    "TP.HCM": {
+      "slug": "hochiminh",
+      "latitude": 10.7769,
+      "longitude": 106.7009,
+      "coverage": "CAMS Global grid cell near the city centre",
+      "rows": 32969
+    },
+    "Đà Nẵng": {
+      "slug": "danang",
+      "latitude": 16.0544,
+      "longitude": 108.2022,
+      "coverage": "CAMS Global grid cell near the city centre",
+      "rows": 32969
+    }
+  },
+  "all_cities": {
+    "rows": 98907,
+    "columns": 37,
+    "start_time": "2022-08-05T07:00:00",
+    "end_time": "2026-05-09T23:00:00",
+    "duplicate_city_time_rows": 0,
+    "missing_rate": 3.770946171382945e-05
+  },
+  "files": {
+    "airquality_hanoi": {
+      "path": "data/raw/airquality_hanoi.csv",
+      "rows": 32969,
+      "columns": 10,
+      "bytes": 2666426,
+      "sha256": "41279a37e73307c4ea355fc776b0c94e1174674f9b732e6fa9503598b880bb15"
+    },
+    "airquality_hochiminh": {
+      "path": "data/raw/airquality_hochiminh.csv",
+      "rows": 32969,
+      "columns": 10,
+      "bytes": 2545672,
+      "sha256": "53f5bd62daf33f69fdc2bf46112fe00babf3c24b48f29be15e9d0e113616aa61"
+    },
+    "airquality_danang": {
+      "path": "data/raw/airquality_danang.csv",
+      "rows": 32969,
+      "columns": 10,
+      "bytes": 2654253,
+      "sha256": "dd28124f3a691665496f9054ca361d17bcdbd588a224cd7d0f0af0e2f328e7e0"
+    },
+    "weather_hanoi": {
+      "path": "data/raw/weather_hanoi.csv",
+      "rows": 33072,
+      "columns": 9,
+      "bytes": 2789969,
+      "sha256": "5a13c0f0a9dbb16d0f9cedec9a89aff8e03271508ae5a8c590f7eb469bfeeb97"
+    },
+    "weather_hochiminh": {
+      "path": "data/raw/weather_hochiminh.csv",
+      "rows": 33072,
+      "columns": 9,
+      "bytes": 2693453,
+      "sha256": "efd13caaa76d5b113dc13dcd0d16037f221a8fa9ec94f66919e10659b3aa541b"
+    },
+    "weather_danang": {
+      "path": "data/raw/weather_danang.csv",
+      "rows": 33072,
+      "columns": 9,
+      "bytes": 2857856,
+      "sha256": "9e3a9d56e1fb0b1f8089f7815de153b0b039c10b7e4ff65e62afdd6374ad5171"
+    },
+    "factory_counts": {
+      "path": "data/raw/factory_counts.csv",
+      "rows": 9,
+      "columns": 4,
+      "bytes": 280,
+      "sha256": "31c2e580c419d6beee1303494c20584e12e93baa22208ef30c630a68182ac624"
+    },
+    "all_cities": {
+      "path": "data/processed/all_cities.csv",
+      "rows": 98907,
+      "columns": 37,
+      "bytes": 25326373,
+      "sha256": "dc895f4e139f455feb02c49986ce8e13a0279846706464352eda8d81178d6d15"
+    },
+    "pm25_training_data": {
+      "path": "data/processed/pm25_training_data.csv",
+      "rows": 98907,
+      "columns": 34,
+      "bytes": 23088780,
+      "sha256": "5cf77abf40c429d787aa5e66c61e884964588fe5d6fcc80a2c1dd88348fad6ba"
+    }
+  },
+  "quality": {
+    "schema_version": 1,
+    "rows": 98907,
+    "columns": 82,
+    "cities": [
+      "Hà Nội",
+      "TP.HCM",
+      "Đà Nẵng"
+    ],
+    "start_time": "2022-08-05T07:00:00",
+    "end_time": "2026-05-09T23:00:00",
+    "duplicate_city_time_rows": 0,
+    "invalid_datetimes": 0,
+    "unknown_cities": [],
+    "non_hourly_gaps": 0,
+    "overall_missing_rate": 0.0003292079995324507,
+    "exact_target_rows_24h": 98835,
+    "target_coverage": 0.9992720434347417,
+    "range_violations": {
+      "pm25": 0,
+      "pm10": 0,
+      "o3": 0,
+      "no2": 0,
+      "so2": 0,
+      "co": 0,
+      "temp": 0,
+      "humidity": 0,
+      "wind_speed": 0,
+      "wind_dir": 0,
+      "precip": 0,
+      "pressure": 0,
+      "cloud_cover": 0
+    },
+    "required_source_missing": {
+      "pm25": 0,
+      "pm10": 0,
+      "o3": 0,
+      "no2": 0,
+      "so2": 0,
+      "co": 0,
+      "temp": 0,
+      "humidity": 0,
+      "wind_speed": 0,
+      "wind_dir": 0,
+      "precip": 0,
+      "pressure": 0,
+      "cloud_cover": 0
+    },
+    "source_path": "D:\\Project123456\\aqi-vietnam\\aqi-vietnam1\\data\\processed\\pm25_training_data_enriched.csv",
+    "source_sha256": "b006829a117e7c79f0b35356b70acacb509a4e150c04bbb9e158873ec7de738e",
+    "source_limitations": [
+      "Open-Meteo air quality values for Vietnam are CAMS Global gridded model data, not ground-station measurements.",
+      "Each city is represented by one grid point near its centre; results must not be interpreted at district level.",
+      "OSM industrial-object counts are static context and do not establish a causal emissions relationship."
+    ],
+    "passed": true
+  }
+}

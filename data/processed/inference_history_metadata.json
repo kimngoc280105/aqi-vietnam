@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source": "data\\processed\\pm25_training_data_enriched.csv",
+  "model": "models\\pm25_24h_best.joblib",
+  "rows": 2160,
+  "columns": 77,
+  "rows_per_city": {
+    "Hà Nội": 720,
+    "TP.HCM": 720,
+    "Đà Nẵng": 720
+  },
+  "start_time": "2026-04-10T00:00:00",
+  "end_time": "2026-05-09T23:00:00",
+  "sha256": "e81928c929493cc4b3eb81f35c55737d909f201d9043d9ac70edd3edb87c7c44"
+}
