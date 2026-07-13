@@ -6,18 +6,18 @@
   --surface-2: #151c25;
   --surface-3: #1c2630;
   --line: #27323e;
-  --line-strong: #3a4654;
-  --text: #f7f4ee;
-  --muted: #aeb8c2;
-  --muted-2: #7f8c98;
-  --mint: #2bd4a2;
-  --mint-2: #80f2ce;
-  --yellow: #ffd166;
-  --orange: #f79d48;
-  --red: #ff6b6b;
-  --blue: #7aa7ff;
-  --violet: #b692ff;
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+  --line-strong: #3d5066;
+  --text: #f0f4f8;
+  --muted: #a8b8cc;
+  --muted-2: #6b80a0;
+  --mint: #0ea5e9;
+  --mint-2: #38bdf8;
+  --yellow: #f4b942;
+  --orange: #f78c3d;
+  --red: #f05252;
+  --blue: #6090f0;
+  --violet: #9b78f0;
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.38);
 }
 
 * {
@@ -1151,7 +1151,7 @@ input:focus {
 }
 
 .grid-line {
-  stroke: rgba(255, 255, 255, 0.11);
+  stroke: rgba(255, 255, 255, 0.18);
   stroke-dasharray: 4 6;
 }
 
@@ -1163,7 +1163,7 @@ input:focus {
 }
 
 .forecast-label {
-  fill: var(--red);
+  fill: var(--mint);
 }
 
 .history-line,
@@ -1361,6 +1361,7 @@ input:focus {
   width: var(--width);
   height: 100%;
   background: var(--color);
+  border-radius: inherit;
 }
 
 .city-card {
@@ -2442,9 +2443,10 @@ select:focus-visible {
 }
 
 .pm25-labels span {
-  color: var(--muted-2);
-  font-size: 9px;
+  color: var(--muted);
+  font-size: 10px;
   text-align: center;
+  font-weight: 600;
 }
 
 .forecast-delta {
@@ -2961,7 +2963,7 @@ th {
 }
 
 .grid-line {
-  stroke: #dbe4e6;
+  stroke: rgba(255, 255, 255, 0.15);
 }
 
 .axis-label {
@@ -2969,7 +2971,7 @@ th {
 }
 
 .history-line {
-  stroke: #169b72;
+  stroke: var(--mint);
 }
 
 .chart-legend span,

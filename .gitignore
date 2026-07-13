@@ -10,6 +10,7 @@ __pycache__/
 
 # Môi trường
 venv/
+.venv/
 .env
 node_modules/
 frontend/node_modules/

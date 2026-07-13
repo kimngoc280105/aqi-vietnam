@@ -988,7 +988,6 @@ function Analytics({ cities, selectedCity, setSelectedCity, selectedProfile, sel
           <h1>Xu hướng</h1>
         </div>
         <div className="control-row">
-          <SelectBox icon={MapPin} value={selectedCity} onChange={setSelectedCity} options={cities.map((item) => item.city)} />
           <SelectBox icon={CalendarDays} value={range} onChange={(value) => setRange(Number(value))} options={[24, 72, 168]} suffix="h" />
           <SelectBox icon={SlidersHorizontal} value={metric} onChange={setMetric} options={["pm25", "pm10", "temp", "humidity", "wind_speed"]} />
         </div>
@@ -1082,9 +1081,7 @@ function Alerts({
           <h1>Trợ lý sức khỏe</h1>
           <p className="screen-copy">So sánh kế hoạch hoạt động ngoài trời ở hiện tại và sau 24 giờ bằng dự báo PM2.5 cùng khoảng bất định. Đây không phải chỉ số AQI chính thức hay tư vấn y khoa.</p>
         </div>
-        <div className="control-row">
-          <SelectBox icon={MapPin} value={selectedCity} onChange={setSelectedCity} options={cities.map((item) => item.city)} />
-        </div>
+
       </div>
 
       <div className="kpi-grid">
