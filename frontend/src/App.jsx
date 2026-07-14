@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Database,
   Gauge,
-  GitCompareArrows,
   HeartPulse,
   Layers3,
   LineChart,
@@ -23,12 +22,9 @@ import {
 const NAV_ITEMS = [
   { id: "dashboard", label: "Tổng quan", icon: Gauge },
   { id: "model", label: "Dự báo", icon: Sparkles },
-  { id: "analytics", label: "Xu hướng", icon: LineChart },
-  { id: "compare", label: "So sánh", icon: GitCompareArrows },
-  { id: "alerts", label: "Sức khỏe", icon: HeartPulse },
-  { id: "data", label: "Dữ liệu", icon: Database },
+  { id: "analytics", label: "Phân tích", icon: LineChart },
+  { id: "data", label: "Mô hình & Dữ liệu", icon: Database },
 ];
-
 const PM25_SCALE = [
   {
     key: "Good",
@@ -212,6 +208,20 @@ function manualProfileFromInput(profile = {}, input = {}) {
   return { ...profile, ...overrides };
 }
 
+function validateManualForecastInput(input = {}) {
+  for (const [key, label, , min, max] of MANUAL_FORECAST_FIELDS) {
+    const raw = input[key];
+    const value = Number(raw);
+    if (raw === "" || raw === null || raw === undefined || !Number.isFinite(value)) {
+      return `${label} phải là một giá trị số.`;
+    }
+    if (value < min || value > max) {
+      return `${label} phải nằm trong khoảng ${min}–${max}.`;
+    }
+  }
+  return "";
+}
+
 async function requestJson(path, options) {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -237,7 +247,6 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState("");
   const [predictions, setPredictions] = useState({});
   const [histories, setHistories] = useState({});
-  const [scenarios, setScenarios] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const selectedItem = useMemo(
@@ -253,13 +262,6 @@ export default function App() {
     loadAll(false, true);
   }, []);
 
-  useEffect(() => {
-    if (!selectedProfile) return;
-    loadScenarios(selectedProfile).catch((error) => {
-      console.error(error);
-      setScenarios([]);
-    });
-  }, [selectedProfile?.city]);
 
   async function loadAll(forceRefresh = false, showLoading = true) {
     if (showLoading) setBoot({ loading: true, error: "" });
@@ -281,23 +283,32 @@ export default function App() {
       setCities(normalizedCities);
       setSelectedCity((current) => normalizedCities.some((item) => item.city === current) ? current : (defaultCity?.city ?? ""));
 
-      const [predictionEntries, historyEntries] = await Promise.all([
-        Promise.all(
+      const [predictionResults, historyResults] = await Promise.all([
+        Promise.allSettled(
           normalizedCities.map(async (item) => [
             item.city,
             await postJson("/api/predict", profilePayload(item.profile)),
           ]),
         ),
-        Promise.all(
+        Promise.allSettled(
           normalizedCities.map(async (item) => [
             item.city,
             await requestJson(`/api/history/${encodeURIComponent(item.city)}?limit=168`),
           ]),
         ),
       ]);
+      const predictionEntries = predictionResults
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+      const historyEntries = historyResults
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+      if (!predictionEntries.length) throw new Error("No city prediction was available");
+      if (predictionEntries.length !== normalizedCities.length || historyEntries.length !== normalizedCities.length) {
+        console.warn("Một phần dữ liệu thành phố không tải được; giao diện tiếp tục với dữ liệu còn lại.");
+      }
       setPredictions(Object.fromEntries(predictionEntries));
       setHistories(Object.fromEntries(historyEntries));
-      if (defaultCity?.profile) await loadScenarios(defaultCity.profile);
       setBoot({ loading: false, error: "" });
     } catch (error) {
       console.error(error);
@@ -305,10 +316,6 @@ export default function App() {
     }
   }
 
-  async function loadScenarios(profile) {
-    const items = await postJson("/api/scenarios", profilePayload(profile));
-    setScenarios(items);
-  }
 
   async function refreshAll() {
     setRefreshing(true);
@@ -330,7 +337,6 @@ export default function App() {
     selectedHistory,
     selectedPrediction,
     selectedForecastCategory,
-    scenarios,
     forecastMode,
     setForecastMode,
     setSelectedCity,
@@ -357,10 +363,8 @@ export default function App() {
         ) : (
           <>
             {activeView === "dashboard" && <DashboardHome {...viewProps} />}
-            {activeView === "data" && <DataLab {...viewProps} />}
+            {activeView === "data" && <ModelDataLab {...viewProps} />}
             {activeView === "analytics" && <Analytics {...viewProps} />}
-            {activeView === "compare" && <Compare {...viewProps} />}
-            {activeView === "alerts" && <Alerts {...viewProps} />}
             {activeView === "model" && <ForecastStudio {...viewProps} />}
           </>
         )}
@@ -432,7 +436,117 @@ function TopNav({
     </header>
   );
 }
-function DataLab({ model, cities }) {
+function ModelDataLab({ model, cities }) {
+  const [section, setSection] = useState("model");
+
+  return (
+    <section className="screen model-data-shell">
+      <div className="screen-head model-data-head">
+        <div>
+          <p className="eyebrow">Bằng chứng kỹ thuật và nguồn dữ liệu</p>
+          <h1>Mô hình & Dữ liệu</h1>
+          <p className="screen-copy">
+            Theo dõi quy trình chọn model, hiệu năng trên tập Test, sai số theo thành phố
+            và khả năng truy xuất nguồn gốc của dữ liệu huấn luyện.
+          </p>
+        </div>
+        <div className="section-tabs" role="tablist" aria-label="Chọn nội dung kỹ thuật">
+          <button type="button" role="tab" aria-selected={section === "model"} className={section === "model" ? "active" : ""} onClick={() => setSection("model")}>
+            <Brain size={17} /> Mô hình
+          </button>
+          <button type="button" role="tab" aria-selected={section === "data"} className={section === "data" ? "active" : ""} onClick={() => setSection("data")}>
+            <Database size={17} /> Dữ liệu
+          </button>
+        </div>
+      </div>
+      {section === "model" ? <ModelEvidence model={model} /> : <DataLab model={model} cities={cities} embedded />}
+    </section>
+  );
+}
+
+function ModelEvidence({ model }) {
+  const suite = model?.required_model_suite ?? {};
+  const comparison = suite.comparison?.length ? suite.comparison : (model?.comparison ?? []);
+  const comparisonByCity = suite.comparison_by_city?.length ? suite.comparison_by_city : (model?.comparison_by_city ?? []);
+  const selection = suite.selection ?? model?.selection ?? {};
+  const selectedModel = selection.selected_model ?? model?.name ?? "XGBoost";
+  const selectedRow = comparison.find((row) => row.model === selectedModel) ?? comparison[0] ?? {};
+  const learningCurve = suite.xgboost_learning_curve?.length ? suite.xgboost_learning_curve : (model?.learning_curve ?? []);
+  const protocol = suite.protocol ?? {};
+  const featureImportance = model?.feature_importance ?? [];
+
+  return (
+    <div className="model-evidence">
+      <div className="kpi-grid">
+        <KpiCard label="Model được chọn" value={selectedModel} suffix="theo Validation RMSE" icon={Brain} tone="mint" />
+        <KpiCard label="Validation RMSE" value={fmt(selectedRow.val_rmse_ug_m3, 2)} suffix="µg/m³" icon={LineChart} tone="blue" />
+        <KpiCard label="Test RMSE" value={fmt(selectedRow.test_rmse_ug_m3, 2)} suffix="µg/m³" icon={BarChart3} tone="yellow" />
+        <KpiCard label="Test R²" value={fmt(selectedRow.test_r2, 3)} suffix="hồi quy t + 24h" icon={Gauge} tone="green" />
+      </div>
+
+      <Panel title="So sánh ba mô hình" eyebrow="Chọn theo Validation RMSE · Test không dùng để chọn model">
+        <ModelComparisonTable rows={comparison} selectedModel={selectedModel} />
+        <p className="panel-note">
+          XGBoost đứng đầu trên Validation RMSE. Khoảng cách Train–Validation cho thấy vẫn còn
+          overfitting, vì vậy kết quả Test và sai số theo từng thành phố được báo cáo riêng.
+        </p>
+      </Panel>
+
+      <div className="evidence-grid model-chart-grid">
+        <Panel title="Learning curve của XGBoost" eyebrow="RMSE trên Train và Validation">
+          <LearningCurveChart rows={learningCurve} />
+          <p className="panel-note">
+            Validation RMSE giảm rồi gần như đi ngang, trong khi Train RMSE tiếp tục giảm.
+            Đây là dấu hiệu khoảng cách tổng quát hóa, không phải hai đường bắt buộc phải trùng nhau.
+          </p>
+        </Panel>
+        <Panel title="Đặc trưng quan trọng" eyebrow="Top feature của model triển khai">
+          <FeatureImportanceBars rows={featureImportance} />
+          <p className="panel-note">
+            Importance phản ánh mức độ model sử dụng feature, không chứng minh feature gây ra ô nhiễm.
+          </p>
+        </Panel>
+      </div>
+
+      <Panel title="Hiệu năng theo thành phố" eyebrow="Đánh giá trên tập Test · đơn vị µg/m³">
+        <CityModelMetricsTable rows={comparisonByCity} />
+        <p className="panel-note">
+          Hà Nội có sai số cao hơn rõ rệt do chuỗi biến động mạnh và nhiều đỉnh PM2.5 đột ngột.
+          Chỉ số tổng hợp vì vậy không nên được diễn giải như hiệu năng giống nhau ở cả ba thành phố.
+        </p>
+      </Panel>
+
+      <div className="evidence-grid">
+        <Panel title="Giao thức thực nghiệm" eyebrow="Không rò rỉ dữ liệu tương lai">
+          <div className="protocol-list">
+            <MetricPill label="Bài toán" value="Hồi quy chuỗi thời gian" />
+            <MetricPill label="Target" value="PM2.5 tại đúng t + 24 giờ" />
+            <MetricPill label="Chia tập" value={protocol.split ?? "Chronological 70/15/15"} />
+            <MetricPill label="Tiêu chí chọn" value={protocol.selection_metric ?? "Validation RMSE"} />
+          </div>
+        </Panel>
+        <Panel title="Giới hạn cần lưu ý" eyebrow="Diễn giải khoa học">
+          <div className="source-list compact-source-list">
+            <article><strong>Dự báo điểm lưới</strong><p>Mỗi thành phố dùng một điểm đại diện gần trung tâm, không đại diện cho mọi quận.</p></article>
+            <article><strong>Không phải quan hệ nhân quả</strong><p>Các kịch bản đầu vào chỉ đo độ nhạy của model khi feature thay đổi.</p></article>
+            <article><strong>Không phải AQI chính thức</strong><p>Đầu ra là nồng độ PM2.5 theo giờ, không phải AQI trung bình 24 giờ.</p></article>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="evidence-grid">
+        <Panel title="Ma trận nhầm lẫn" eyebrow="Nhóm rủi ro tham chiếu từ đầu ra hồi quy">
+          <ConfusionMatrix rows={model?.confusion_matrix ?? []} />
+        </Panel>
+        <Panel title="Các lần dự báo sai lớn" eyebrow="Phân tích lỗi trên tập Test">
+          <TopErrorCases rows={model?.top_error_cases ?? []} />
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function DataLab({ model, cities, embedded = false }) {
   const data = model?.data_profile ?? {};
   const crawl = model?.crawl_manifest ?? {};
   const counts = data.city_counts ?? {};
@@ -441,7 +555,7 @@ function DataLab({ model, cities }) {
     .filter(Boolean);
   const quality = crawl.quality ?? {};
   return (
-    <section className="screen">
+    <section className={embedded ? "data-evidence" : "screen"}>
       <div className="screen-head">
         <div>
           <p className="eyebrow">Nguồn gốc và chất lượng</p>
@@ -534,15 +648,137 @@ function DataLab({ model, cities }) {
         </Panel>
       </div>
 
-      <div className="evidence-grid">
-        <Panel title="Ma trận nhầm lẫn" eyebrow="Nhóm rủi ro tham chiếu">
-          <ConfusionMatrix rows={model?.confusion_matrix ?? []} />
-        </Panel>
-        <Panel title="Các lần dự báo sai lớn" eyebrow="Error audit">
-          <TopErrorCases rows={model?.top_error_cases ?? []} />
-        </Panel>
-      </div>
+
     </section>
+  );
+}
+
+function ModelComparisonTable({ rows, selectedModel }) {
+  if (!rows.length) return <div className="empty-state">Chưa có kết quả so sánh model.</div>;
+  return (
+    <div className="model-table-wrap">
+      <table className="model-comparison-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Val RMSE</th>
+            <th>Test RMSE</th>
+            <th>Test MAE</th>
+            <th>Test R²</th>
+            <th>Gap Val</th>
+            <th>Kết quả</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...rows].sort((a, b) => Number(a.validation_rank) - Number(b.validation_rank)).map((row) => (
+            <tr key={row.model} className={row.model === selectedModel ? "selected" : ""}>
+              <td><strong>{row.model}</strong><small>{row.family}</small></td>
+              <td>{fmt(row.val_rmse_ug_m3, 2)}</td>
+              <td>{fmt(row.test_rmse_ug_m3, 2)}</td>
+              <td>{fmt(row.test_mae_ug_m3, 2)}</td>
+              <td>{fmt(row.test_r2, 3)}</td>
+              <td>{fmt(row.val_generalization_gap_pct, 1)}%</td>
+              <td><span className={row.model === selectedModel ? "selected-chip" : "candidate-chip"}>{row.model === selectedModel ? "Được chọn" : "Đối chứng"}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LearningCurveChart({ rows }) {
+  if (!rows.length) return <div className="empty-state">Chưa có learning curve.</div>;
+  const values = rows
+    .flatMap((row) => [Number(row.train_rmse_ug_m3 ?? row.train_rmse), Number(row.val_rmse_ug_m3 ?? row.val_rmse)])
+    .filter(Number.isFinite);
+  const rounds = rows.map((row, index) => Number(row.round ?? index + 1));
+  const width = 720;
+  const height = 280;
+  const pad = { left: 52, right: 18, top: 22, bottom: 42 };
+  const minY = Math.floor(Math.min(...values) - 1);
+  const maxY = Math.ceil(Math.max(...values) + 1);
+  const minX = Math.min(...rounds);
+  const maxX = Math.max(...rounds);
+  const x = (value) => pad.left + ((value - minX) / Math.max(maxX - minX, 1)) * (width - pad.left - pad.right);
+  const y = (value) => pad.top + ((maxY - value) / Math.max(maxY - minY, 1)) * (height - pad.top - pad.bottom);
+  const pathFor = (keyA, keyB) => rows.map((row, index) => {
+    const value = Number(row[keyA] ?? row[keyB]);
+    return `${index ? "L" : "M"} ${x(rounds[index]).toFixed(1)} ${y(value).toFixed(1)}`;
+  }).join(" ");
+  const ticks = [minY, (minY + maxY) / 2, maxY];
+
+  return (
+    <div className="learning-curve">
+      <div className="chart-legend">
+        <span className="train">Train RMSE</span>
+        <span className="validation">Validation RMSE</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Learning curve RMSE của XGBoost">
+        {ticks.map((tick) => (
+          <g key={tick}>
+            <line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} className="chart-grid-line" />
+            <text x={pad.left - 10} y={y(tick) + 4} textAnchor="end">{fmt(tick, 1)}</text>
+          </g>
+        ))}
+        <line x1={pad.left} x2={pad.left} y1={pad.top} y2={height - pad.bottom} className="chart-axis" />
+        <line x1={pad.left} x2={width - pad.right} y1={height - pad.bottom} y2={height - pad.bottom} className="chart-axis" />
+        <path d={pathFor("train_rmse_ug_m3", "train_rmse")} className="curve-train" />
+        <path d={pathFor("val_rmse_ug_m3", "val_rmse")} className="curve-validation" />
+        <text x={width / 2} y={height - 8} textAnchor="middle" className="axis-title">Boosting round</text>
+        <text x="14" y={height / 2} textAnchor="middle" className="axis-title" transform={`rotate(-90 14 ${height / 2})`}>RMSE (µg/m³)</text>
+      </svg>
+    </div>
+  );
+}
+
+function FeatureImportanceBars({ rows }) {
+  const items = rows.slice(0, 10);
+  if (!items.length) return <div className="empty-state">Chưa có feature importance.</div>;
+  const max = Math.max(...items.map((row) => Number(row.importance)), 1e-6);
+  return (
+    <div className="importance-bars">
+      {items.map((row, index) => (
+        <div key={row.feature}>
+          <span>{index + 1}</span>
+          <strong>{featureLabel(row.feature)}</strong>
+          <i><b style={{ "--width": `${(Number(row.importance) / max) * 100}%` }} /></i>
+          <small>{fmt(Number(row.importance) * 100, 1)}%</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CityModelMetricsTable({ rows }) {
+  if (!rows.length) return <div className="empty-state">Chưa có đánh giá theo thành phố.</div>;
+  return (
+    <div className="model-table-wrap">
+      <table className="model-comparison-table city-model-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Thành phố</th>
+            <th>RMSE</th>
+            <th>MAE</th>
+            <th>R²</th>
+            <th>Macro F1</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.model}-${row.city}`}>
+              <td><strong>{row.model}</strong></td>
+              <td>{row.city}</td>
+              <td>{fmt(row.rmse_ug_m3, 2)}</td>
+              <td>{fmt(row.mae_ug_m3, 2)}</td>
+              <td>{fmt(row.r2, 3)}</td>
+              <td>{fmt(row.bucket_f1_macro, 3)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -618,29 +854,35 @@ function TopErrorCases({ rows }) {
 function DashboardHome({
   model,
   cities,
-  predictions,
-  histories,
   selectedCity,
   selectedItem,
   selectedProfile,
   selectedHistory,
-  selectedPrediction,
-  selectedForecastCategory,
-  scenarios,
   setSelectedCity,
   setActiveView,
   setForecastMode,
 }) {
-  const horizon = model?.metrics?.horizon_hours ?? 24;
   const currentCategory = categoryFromPm25(selectedProfile?.pm25);
-  const forecastValue = Number(selectedPrediction?.prediction_pm25 ?? selectedProfile?.pm25 ?? 0);
   const currentValue = Number(selectedProfile?.pm25 ?? 0);
-  const delta = forecastValue - currentValue;
-  const forecastRows = buildCityForecastRows(cities, predictions);
-  const advice = healthAdviceFor(selectedForecastCategory?.key);
+  const recentPm25 = selectedHistory
+    .slice(-24)
+    .map((row) => Number(row.pm25))
+    .filter(Number.isFinite);
+  const recentStats = {
+    min: recentPm25.length ? Math.min(...recentPm25) : currentValue,
+    mean: recentPm25.length ? recentPm25.reduce((sum, value) => sum + value, 0) / recentPm25.length : currentValue,
+    max: recentPm25.length ? Math.max(...recentPm25) : currentValue,
+  };
+  const advice = healthAdviceFor(currentCategory.key);
   const source = selectedItem?.source ?? {};
-  const interval = selectedPrediction?.interval;
   const modelName = model?.name ?? model?.metrics?.model ?? "Model dự báo";
+  const currentCityRows = [...cities]
+    .map((item) => ({
+      city: item.city,
+      value: Number(item.profile.pm25 ?? 0),
+      category: categoryFromPm25(item.profile.pm25),
+    }))
+    .sort((left, right) => right.value - left.value);
   const environment = [
     ["PM10", fmt(selectedProfile?.pm10, 1), "µg/m³"],
     ["O₃", fmt(selectedProfile?.o3, 1), "µg/m³"],
@@ -654,12 +896,14 @@ function DashboardHome({
     <section className="screen consumer-screen">
       <header className="overview-head">
         <div>
-          <p className="eyebrow">Chất lượng không khí theo giờ</p>
+          <p className="eyebrow">Chất lượng không khí hiện tại</p>
           <div className="location-title">
             <MapPin size={22} />
             <h1>{selectedProfile?.city ?? "Việt Nam"}</h1>
           </div>
-          <p className="screen-copy">Điểm lưới CAMS đại diện gần trung tâm thành phố · dự báo PM2.5 sau {horizon} giờ.</p>
+          <p className="screen-copy">
+            Trạng thái mới nhất tại điểm lưới CAMS đại diện gần trung tâm thành phố.
+          </p>
         </div>
         <button
           className="secondary-action"
@@ -670,31 +914,9 @@ function DashboardHome({
           }}
         >
           <Sparkles size={17} />
-          Mở trung tâm dự báo
+          Xem dự báo sau 24 giờ
         </button>
       </header>
-
-      <div className="city-tabs" role="tablist" aria-label="Chọn thành phố">
-        {cities.map((item) => {
-          const itemCategory = categoryFromPm25(item.profile.pm25);
-          return (
-            <button
-              key={item.city}
-              type="button"
-              role="tab"
-              aria-selected={item.city === selectedCity}
-              className={item.city === selectedCity ? "active" : ""}
-              onClick={() => setSelectedCity(item.city)}
-              style={{ "--tone": itemCategory.color }}
-            >
-              <i />
-              <span>{item.city}</span>
-              <b>{fmt(item.profile.pm25, 1)}</b>
-              <small>µg/m³</small>
-            </button>
-          );
-        })}
-      </div>
 
       <div className="data-status-bar">
         <span className={`source-state ${isLiveSource(source.status) ? "live" : "warning"}`}>
@@ -705,10 +927,10 @@ function DashboardHome({
         <span>Mỗi thành phố là một điểm lưới đại diện</span>
       </div>
 
-      <div className="air-summary-grid">
+      <div className="overview-current-summary">
         <article className="air-condition-card" style={{ "--tone": currentCategory.color }}>
           <div className="air-card-head">
-            <span>PM2.5 hiện tại</span>
+            <span>PM2.5 mới nhất</span>
             <strong>{currentCategory.label}</strong>
           </div>
           <div className="air-reading">
@@ -716,47 +938,31 @@ function DashboardHome({
             <span>µg/m³</span>
           </div>
           <p>{currentCategory.text}</p>
+          <div className="current-observation-meta">
+            <span>Thời điểm quan sát</span>
+            <strong>{fmtDate(selectedProfile?.datetime)}</strong>
+          </div>
+          <div className="current-range-stats" aria-label="Thống kê PM2.5 trong 24 giờ gần nhất">
+            <div><span>Thấp nhất</span><strong>{fmt(recentStats.min, 1)}</strong></div>
+            <div><span>Trung bình</span><strong>{fmt(recentStats.mean, 1)}</strong></div>
+            <div><span>Cao nhất</span><strong>{fmt(recentStats.max, 1)}</strong></div>
+          </div>
           <Pm25Scale value={currentValue} />
         </article>
 
-        <article className="air-forecast-card" style={{ "--tone": selectedForecastCategory.color }}>
-          <div className="air-card-head">
-            <span>Sau {horizon} giờ</span>
-            <strong>{selectedForecastCategory.label}</strong>
-          </div>
-          <div className="air-reading">
-            <b>{fmt(forecastValue, 1)}</b>
-            <span>µg/m³</span>
-          </div>
-          <div className="forecast-delta">
-            <span className={delta >= 0 ? "trend-up" : "trend-down"}>
-              {delta >= 0 ? "+" : ""}{fmt(delta, 1)} so với hiện tại
-            </span>
-          </div>
-          {interval && (
-            <div className="interval-summary">
-              <span>Khoảng dự báo 90%</span>
-              <strong>{fmt(interval.lower, 1)} – {fmt(interval.upper, 1)}</strong>
-              <small>µg/m³</small>
-            </div>
-          )}
-        </article>
-
-        <Panel title="Diễn biến PM2.5" eyebrow="96 giờ gần nhất + mốc dự báo">
+        <Panel title="PM2.5 trong 24 giờ gần nhất" eyebrow="Chỉ gồm dữ liệu đã quan sát">
           <ForecastBandChart
-            rows={selectedHistory}
-            prediction={selectedPrediction}
+            rows={selectedHistory.slice(-24)}
+            prediction={null}
             metric="pm25"
-            forecastLabel={selectedForecastCategory.label}
-            tall
           />
         </Panel>
       </div>
 
-      <section className="health-guidance" style={{ "--tone": selectedForecastCategory.color }}>
+      <section className="health-guidance" style={{ "--tone": currentCategory.color }}>
         <div className="guidance-icon"><HeartPulse size={24} /></div>
         <div className="guidance-main">
-          <span>Khuyến nghị sức khỏe</span>
+          <span>Khuyến nghị theo PM2.5 hiện tại</span>
           <h2>{advice[0]?.title}</h2>
           <p>{advice[0]?.text}</p>
         </div>
@@ -786,9 +992,9 @@ function DashboardHome({
           </div>
         </Panel>
 
-        <Panel title="So sánh 3 thành phố" eyebrow="Dự báo sau 24 giờ">
+        <Panel title="So sánh 3 thành phố" eyebrow="PM2.5 mới nhất">
           <div className="city-forecast-list">
-            {forecastRows.map((item, index) => (
+            {currentCityRows.map((item, index) => (
               <button
                 key={item.city}
                 type="button"
@@ -805,74 +1011,24 @@ function DashboardHome({
           </div>
         </Panel>
 
-        <Panel title="Độ tin cậy model" eyebrow="Đánh giá trên tập Test">
+        <Panel title="Trạng thái dữ liệu" eyebrow="Nguồn đầu vào hiện tại">
           <div className="model-trust">
-            <strong>{modelName}</strong>
-            <p>Model được chọn theo Validation RMSE, không chọn theo kết quả Test.</p>
+            <strong>{source.provider ?? "Không xác định nguồn"}</strong>
+            <p>{sourceStatusLabel(source.status)}. Dữ liệu được cache để tránh gọi API lặp lại khi nhiều người cùng truy cập.</p>
             <div>
-              <MetricPill label="MAE" value={`${fmt(model?.metrics?.test_mae_ug_m3, 1)} µg/m³`} />
-              <MetricPill label="Tốt hơn baseline" value={`${fmt(modelImprovement(model), 1)}%`} />
-              <MetricPill label="Coverage tại thành phố" value={`${fmt((interval?.empirical_test_coverage ?? 0) * 100, 1)}%`} />
+              <MetricPill label="Quan sát mới nhất" value={fmtDate(selectedProfile?.datetime)} />
+              <MetricPill label="Chu kỳ cache" value="15 phút" />
+              <MetricPill label="Phạm vi" value="Điểm lưới đại diện" />
             </div>
-            <button
-              className="text-action"
-              type="button"
-              onClick={() => {
-                setForecastMode("automatic");
-                setActiveView("model");
-              }}
-            >
-              Mở dự báo chi tiết
+            <button className="text-action" type="button" onClick={() => setActiveView("data")}>
+              Xem nguồn và chất lượng dữ liệu
             </button>
           </div>
-        </Panel>
-      </div>
-
-      <div className="model-insight-grid">
-        <Panel title="Hai cách dự báo" eyebrow="Dùng ngay hoặc tự tạo kịch bản">
-          <div className="dual-forecast-entry">
-            <button
-              type="button"
-              onClick={() => {
-                setForecastMode("automatic");
-                setActiveView("model");
-              }}
-            >
-              <Sparkles size={20} />
-              <span>Dự báo tự động</span>
-              <small>Lấy dữ liệu mới nhất và trình bày như bản tin thời tiết.</small>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setForecastMode("manual");
-                setActiveView("model");
-              }}
-            >
-              <SlidersHorizontal size={20} />
-              <span>Nhập thông số</span>
-              <small>Thay đổi chỉ số và chạy lại model cho kịch bản riêng.</small>
-            </button>
-          </div>
-        </Panel>
-
-        <Panel title="Kịch bản nhanh" eyebrow="Model phản ứng khi điều kiện thay đổi">
-          <div className="scenario-preview">
-            {scenarios.slice(0, 3).map((item) => (
-              <article key={item.name} style={{ "--tone": item.category.color }}>
-                <span>{scenarioLabel(item.name)}</span>
-                <strong>{fmt(item.prediction_pm25, 1)}</strong>
-                <small>{item.category.label_vi}</small>
-              </article>
-            ))}
-          </div>
-          <p className="panel-note">Mở chế độ nhập thông số để tự tạo và so sánh kịch bản.</p>
         </Panel>
       </div>
     </section>
   );
 }
-
 function Pm25Scale({ value }) {
   const thresholds = [0, 9, 35.4, 55.4, 125.4, 225.4];
   const labels = ["Tốt", "Trung bình", "Nhạy cảm", "Xấu", "Rất xấu"];
@@ -963,47 +1119,47 @@ function healthAdviceFor(key = "Moderate") {
   ];
 }
 
-function driverHighlights(profile = {}) {
-  return [
-    ["PM2.5 hiện tại", fmt(profile.pm25, 1), "mốc gần nhất trước dự báo"],
-    ["Trung bình 24h", fmt(profile.pm25_roll_24h, 1), "nền bụi gần nhất"],
-    ["Cùng giờ hôm trước", fmt(profile.pm25_lag_24h, 1), "tín hiệu mùa vụ 24 giờ"],
-    ["Trung vị cùng giờ 7 ngày", fmt(profile.pm25_same_hour_median_7d, 1), "nền mùa vụ trong tuần"],
-  ];
-}
-
-function Analytics({ cities, selectedCity, setSelectedCity, selectedProfile, selectedHistory, selectedPrediction }) {
+function Analytics({ cities, histories, selectedProfile, selectedHistory }) {
   const [metric, setMetric] = useState("pm25");
   const [range, setRange] = useState(168);
   const rows = selectedHistory.slice(-range);
   const currentValue = selectedProfile?.[metric];
   const category = metric === "pm25" ? categoryFromPm25(currentValue) : null;
   const calendar = buildDailyCells(rows, metric);
+  const metricValues = rows.map((row) => Number(row[metric])).filter(Number.isFinite);
+  const average = metricValues.length
+    ? metricValues.reduce((sum, value) => sum + value, 0) / metricValues.length
+    : Number(currentValue ?? 0);
+  const volatility = calculateVolatility(rows, metric);
 
   return (
     <section className="screen">
       <div className="screen-head">
         <div>
-          <p className="eyebrow">Lịch sử và biến động</p>
-          <h1>Xu hướng</h1>
+          <p className="eyebrow">Lịch sử, biến động và đối chiếu khu vực</p>
+          <h1>Phân tích</h1>
+          <p className="screen-copy">
+            Khám phá chuỗi thời gian của thành phố đang chọn và so sánh cùng chỉ số
+            tại ba điểm lưới đại diện.
+          </p>
         </div>
         <div className="control-row">
-          <SelectBox icon={CalendarDays} value={range} onChange={(value) => setRange(Number(value))} options={[24, 72, 168]} suffix="h" />
-          <SelectBox icon={SlidersHorizontal} value={metric} onChange={setMetric} options={["pm25", "pm10", "temp", "humidity", "wind_speed"]} />
+          <SelectBox label="Khoảng thời gian" icon={CalendarDays} value={range} onChange={(value) => setRange(Number(value))} options={[24, 72, 168]} suffix="h" />
+          <SelectBox label="Chỉ số" icon={SlidersHorizontal} value={metric} onChange={setMetric} options={["pm25", "pm10", "temp", "humidity", "wind_speed"]} />
         </div>
       </div>
 
       <div className="kpi-grid">
         <KpiCard label="Giá trị hiện tại" value={fmt(currentValue, metric === "humidity" ? 0 : 1)} suffix={metricUnit(metric)} icon={Activity} tone="mint" />
-        <KpiCard label="Nhóm sức khỏe" value={category?.label ?? "N/A"} suffix="PM2.5" icon={HeartPulse} tone="yellow" />
-        <KpiCard label="Dự báo 24h" value={fmt(selectedPrediction?.prediction_pm25, 1)} suffix="µg/m³" icon={LineChart} tone="blue" />
-        <KpiCard label="Khoảng dữ liệu" value={`${range}h`} suffix="lịch sử" icon={Database} tone="green" />
+        <KpiCard label="Nhóm sức khỏe" value={category?.label ?? "Chỉ áp dụng PM2.5"} suffix="tham chiếu hiện tại" icon={HeartPulse} tone="yellow" />
+        <KpiCard label="Trung bình giai đoạn" value={fmt(average, metric === "humidity" ? 0 : 1)} suffix={metricUnit(metric)} icon={BarChart3} tone="blue" />
+        <KpiCard label="Độ biến động" value={fmt(volatility, 1)} suffix={metricUnit(metric)} icon={LineChart} tone="green" />
       </div>
 
-      <Panel title={`${metricLabel(metric)}: lịch sử và điểm dự báo`} eyebrow="Chuỗi thời gian">
+      <Panel title={`${metricLabel(metric)} tại ${selectedProfile?.city ?? "thành phố đã chọn"}`} eyebrow="Chuỗi thời gian đã quan sát">
         <ForecastBandChart
           rows={rows}
-          prediction={metric === "pm25" ? selectedPrediction : null}
+          prediction={null}
           metric={metric}
           title=""
           tall
@@ -1014,101 +1170,39 @@ function Analytics({ cities, selectedCity, setSelectedCity, selectedProfile, sel
         <Panel title="Trung bình theo ngày" eyebrow="Lịch gần đây">
           <div className="heatmap">
             {calendar.map((cell) => (
-              <span key={cell.label} style={{ background: heatColor(cell.value, metric) }}>
-                {cell.day}
-              </span>
+              <span key={cell.label} style={{ background: heatColor(cell.value, metric) }}>{cell.day}</span>
             ))}
           </div>
         </Panel>
-        <Panel title="Hồ sơ chất ô nhiễm" eyebrow="So với ngưỡng hiển thị">
+        <Panel title="Hồ sơ chất ô nhiễm" eyebrow="Quan sát cùng thời điểm">
           <PollutantProfile profile={selectedProfile} />
         </Panel>
       </div>
-    </section>
-  );
-}
 
-function Compare({ cities, predictions, histories }) {
-  const [metric, setMetric] = useState("pm25");
-  return (
-    <section className="screen">
-      <div className="screen-head">
+      <div className="analysis-section-head">
         <div>
           <p className="eyebrow">Ba điểm đại diện</p>
-          <h1>So sánh</h1>
-          <p className="screen-copy">Đối chiếu lịch sử, dự báo và mức rủi ro tại các điểm lưới gần trung tâm Hà Nội, TP.HCM và Đà Nẵng.</p>
+          <h2>So sánh thành phố</h2>
         </div>
-        <div className="control-row">
-          <SelectBox icon={SlidersHorizontal} value={metric} onChange={setMetric} options={["pm25", "pm10", "temp", "humidity", "wind_speed"]} />
-        </div>
+        <span>96 giờ gần nhất</span>
       </div>
 
-      <Panel title="Xu hướng nhiều thành phố" eyebrow="96 giờ gần nhất">
+      <Panel title={`Xu hướng ${metricLabel(metric).toLowerCase()} nhiều thành phố`} eyebrow="Cùng thang đo và thời gian">
         <CompareLineChart histories={histories} cities={cities} metric={metric} />
       </Panel>
 
       <div className="compare-card-grid">
         {cities.map((item) => (
-          <CityCompareCard key={item.city} item={item} prediction={predictions[item.city]} />
+          <CityCompareCard key={item.city} item={item} />
         ))}
       </div>
 
-      <Panel title="Bảng trạng thái" eyebrow="Hiện tại và sau 24 giờ">
-        <CompareTable cities={cities} predictions={predictions} />
+      <Panel title="Bảng trạng thái hiện tại" eyebrow="Quan sát mới nhất tại ba điểm đại diện">
+        <CompareTable cities={cities} />
       </Panel>
     </section>
   );
 }
-
-function Alerts({
-  cities,
-  predictions,
-  model,
-  selectedCity,
-  setSelectedCity,
-  selectedProfile,
-  selectedPrediction,
-}) {
-  const events = buildAlertEvents(cities, predictions).filter((event) => event.city === selectedCity);
-  const aqiEvents = events.filter((event) => event.kind !== "forecast");
-  const forecastEvents = events.filter((event) => event.kind !== "current");
-  const interval = selectedPrediction?.interval ?? {};
-  return (
-    <section className="screen">
-      <div className="screen-head">
-        <div>
-          <p className="eyebrow">Hỗ trợ quyết định cá nhân</p>
-          <h1>Trợ lý sức khỏe</h1>
-          <p className="screen-copy">So sánh kế hoạch hoạt động ngoài trời ở hiện tại và sau 24 giờ bằng dự báo PM2.5 cùng khoảng bất định. Đây không phải chỉ số AQI chính thức hay tư vấn y khoa.</p>
-        </div>
-
-      </div>
-
-      <div className="kpi-grid">
-        <KpiCard label="PM2.5 hiện tại" value={fmt(selectedProfile?.pm25, 1)} suffix="µg/m³" icon={Activity} tone="mint" />
-        <KpiCard label="Dự báo 24h" value={fmt(selectedPrediction?.prediction_pm25, 1)} suffix="µg/m³" icon={LineChart} tone="red" />
-        <KpiCard label="Khoảng dự báo 90%" value={`${fmt(interval.lower, 1)} - ${fmt(interval.upper, 1)}`} suffix="µg/m³" icon={ShieldAlert} tone="yellow" />
-        <KpiCard label="MAE test" value={fmt(model?.metrics?.test_mae_ug_m3, 1)} suffix="µg/m³" icon={BarChart3} tone="blue" />
-      </div>
-
-      <ActivityPlanner
-        city={selectedCity}
-        currentPm25={selectedProfile?.pm25}
-        prediction={selectedPrediction}
-      />
-
-      <div className="alert-columns">
-        <Panel title="PM2.5 hiện tại" eyebrow="Cảnh báo tham chiếu">
-          <AlertList events={aqiEvents} />
-        </Panel>
-        <Panel title="PM2.5 sau 24 giờ" eyebrow="Rủi ro dự báo">
-          <AlertList events={forecastEvents} />
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
 function ActivityPlanner({ city, currentPm25, prediction }) {
   const [group, setGroup] = useState("general");
   const [activity, setActivity] = useState("moderate");
@@ -1307,6 +1401,12 @@ function ForecastStudio({
 
   async function runManualForecast() {
     if (!selectedProfile) return;
+    const validationError = validateManualForecastInput(manualInput);
+    if (validationError) {
+      setManualError(validationError);
+      setManualResult(null);
+      return;
+    }
     setManualLoading(true);
     setManualError("");
     try {
@@ -1355,25 +1455,6 @@ function ForecastStudio({
             <small>Tạo kịch bản riêng</small>
           </button>
         </div>
-      </div>
-
-      <div className="city-tabs compact-tabs" role="tablist" aria-label="Chọn thành phố dự báo">
-        {cities.map((item) => (
-          <button
-            key={item.city}
-            type="button"
-            role="tab"
-            aria-selected={item.city === selectedCity}
-            className={item.city === selectedCity ? "active" : ""}
-            onClick={() => setSelectedCity(item.city)}
-            style={{ "--tone": categoryFromPm25(item.profile.pm25).color }}
-          >
-            <i />
-            <span>{item.city}</span>
-            <b>{fmt(item.profile.pm25, 1)}</b>
-            <small>µg/m³</small>
-          </button>
-        ))}
       </div>
 
       {forecastMode === "automatic" ? (
@@ -1478,6 +1559,11 @@ function ForecastStudio({
               </p>
             </Panel>
           </div>
+          <ActivityPlanner
+            city={selectedCity}
+            currentPm25={selectedProfile?.pm25}
+            prediction={selectedPrediction}
+          />
         </div>
       ) : (
         <div className="manual-forecast-layout">
@@ -1530,6 +1616,9 @@ function ForecastStudio({
                 </fieldset>
               ))}
             </div>
+            <p className="manual-caveat">
+              Kịch bản chỉ phân tích độ nhạy của model. Các feature ẩn vẫn lấy từ hồ sơ thành phố và kết quả không chứng minh quan hệ nhân quả.
+            </p>
 
             {manualError && <p className="manual-error">{manualError}</p>}
             <button
@@ -1632,11 +1721,11 @@ function Panel({ title, eyebrow, children }) {
   );
 }
 
-function SelectBox({ icon: Icon, value, onChange, options, suffix = "" }) {
+function SelectBox({ label, icon: Icon, value, onChange, options, suffix = "" }) {
   return (
     <label className="select-box">
       <Icon size={18} />
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -1732,7 +1821,7 @@ function ForecastBandChart({ rows = [], prediction, metric = "pm25", title = "",
   return (
     <div className="chart-box">
       {title && <h3>{title}</h3>}
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Biểu đồ lịch sử và dự báo">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={prediction ? "Biểu đồ lịch sử và dự báo" : "Biểu đồ dữ liệu lịch sử"}>
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const y = pad.top + plotH * ratio;
           const label = max - (max - min) * ratio;
@@ -1813,9 +1902,9 @@ function CompareLineChart({ histories, cities, metric }) {
   );
 }
 
-function CityCompareCard({ item, prediction }) {
+function CityCompareCard({ item }) {
   const profile = item.profile;
-  const category = normalizedPredictionCategory(prediction, profile.pm25);
+  const category = categoryFromPm25(profile.pm25);
   return (
     <article className="city-card">
       <div className="city-card-head">
@@ -1827,10 +1916,10 @@ function CityCompareCard({ item, prediction }) {
           {category.label}
         </span>
       </div>
-      <AqiMiniGauge value={prediction?.prediction_pm25 ?? profile.pm25} color={category.color} />
+      <AqiMiniGauge value={profile.pm25} color={category.color} />
       <div className="metric-strip">
         <MetricPill label="PM2.5" value={fmt(profile.pm25, 1)} />
-        <MetricPill label="Dự báo" value={fmt(prediction?.prediction_pm25, 1)} />
+        <MetricPill label="PM10" value={fmt(profile.pm10, 1)} />
         <MetricPill label="Nhiệt độ" value={`${fmt(profile.temp, 1)}°C`} />
         <MetricPill label="Gió" value={`${fmt(profile.wind_speed, 1)} km/h`} />
       </div>
@@ -1848,11 +1937,12 @@ function AqiMiniGauge({ value, color }) {
   );
 }
 
-function CompareTable({ cities, predictions }) {
+function CompareTable({ cities }) {
   const rows = [
     ["PM2.5", (item) => item.profile.pm25, "pm25"],
     ["PM10", (item) => item.profile.pm10, "pollutant"],
-    ["Dự báo 24h", (item) => predictions[item.city]?.prediction_pm25, "pm25"],
+    ["O₃", (item) => item.profile.o3, "pollutant"],
+    ["Độ ẩm", (item) => item.profile.humidity, "humidity"],
     ["Nhiệt độ", (item) => item.profile.temp, "temp"],
     ["Gió", (item) => item.profile.wind_speed, "wind"],
   ];
@@ -1883,31 +1973,6 @@ function CompareTable({ cities, predictions }) {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function AlertList({ events }) {
-  if (!events.length) {
-    return (
-      <div className="empty-state">
-        <ShieldAlert size={20} />
-        <span>Không có cảnh báo vượt ngưỡng cao trong dữ liệu hiện tại.</span>
-      </div>
-    );
-  }
-  return (
-    <div className="alert-list">
-      {events.map((event) => (
-        <article key={`${event.city}-${event.kind}`} className="alert-card" style={{ borderColor: event.color }}>
-          <div>
-            <span>{event.kind === "forecast" ? "Rủi ro dự báo" : event.kind === "current" ? "Cảnh báo hiện tại" : "Rủi ro kết hợp"}</span>
-            <strong>{event.city}</strong>
-          </div>
-          <p>{event.message}</p>
-          <small>{event.category}</small>
-        </article>
-      ))}
     </div>
   );
 }
@@ -1966,33 +2031,6 @@ function ErrorScreen({ message, onRetry }) {
   );
 }
 
-function buildAlertEvents(cities, predictions) {
-  return cities.flatMap((item) => {
-    const current = categoryFromPm25(item.profile.pm25);
-    const forecast = normalizedPredictionCategory(predictions[item.city], item.profile.pm25);
-    const events = [];
-    if (riskRank(current.key) >= 2) {
-      events.push({
-        city: item.city,
-        kind: "current",
-        color: current.color,
-        category: current.label,
-        message: `PM2.5 hiện tại ${fmt(item.profile.pm25, 1)} µg/m³. ${current.text}`,
-      });
-    }
-    if (riskRank(forecast.key) >= 2) {
-      events.push({
-        city: item.city,
-        kind: "forecast",
-        color: forecast.color,
-        category: forecast.label,
-        message: `Dự báo 24h ${fmt(predictions[item.city]?.prediction_pm25, 1)} µg/m³. ${forecast.text}`,
-      });
-    }
-    return events;
-  });
-}
-
 function buildDailyCells(rows, metric) {
   const groups = new Map();
   rows.forEach((row) => {
@@ -2012,8 +2050,8 @@ function buildDailyCells(rows, metric) {
   });
 }
 
-function calculateVolatility(rows) {
-  const values = rows.map((row) => Number(row.pm25)).filter(Number.isFinite);
+function calculateVolatility(rows, metric = "pm25") {
+  const values = rows.map((row) => Number(row[metric])).filter(Number.isFinite);
   if (!values.length) return 0;
   const avg = values.reduce((sum, item) => sum + item, 0) / values.length;
   const variance = values.reduce((sum, item) => sum + (item - avg) ** 2, 0) / values.length;
@@ -2126,13 +2164,6 @@ function sourceStatusLabel(status = "") {
   }[status] ?? "Không rõ trạng thái nguồn";
 }
 
-function modelImprovement(model) {
-  const baselineRmse = Number(model?.baseline?.test_rmse_ug_m3);
-  const selectedRmse = Number(model?.metrics?.test_rmse_ug_m3);
-  if (!Number.isFinite(baselineRmse) || baselineRmse <= 0 || !Number.isFinite(selectedRmse)) return 0;
-  return ((baselineRmse - selectedRmse) / baselineRmse) * 100;
-}
-
 function shortHash(value = "") {
   if (!value) return "N/A";
   return value.length > 20 ? `${value.slice(0, 16)}…${value.slice(-8)}` : value;
@@ -2155,13 +2186,4 @@ function riskBucketLabel(value = "") {
     "Very Unhealthy": "Rất xấu",
     Hazardous: "Nguy hại",
   }[value] ?? value;
-}
-
-function scenarioLabel(name) {
-  return {
-    "Hien tai": "Hiện tại",
-    "Bui min tang 20%": "Bụi mịn tăng 20%",
-    "Gio/mua cai thien": "Gió/mưa cải thiện",
-    "Am cao, gio yeu": "Ẩm cao, gió yếu",
-  }[name] ?? name;
 }

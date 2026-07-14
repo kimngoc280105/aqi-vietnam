@@ -16,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.activity_planner import build_activity_plan
 from backend.features import (
     CITY_CONFIG,
-    CATEGORICAL_FEATURES,
     ENGINEERED_FEATURES,
     HISTORY_FEATURES,
     POLLUTANT_FEATURES,
@@ -90,15 +89,18 @@ class PredictionRequest(BaseModel):
     city: str = Field(default="Hà Nội")
     observed_at: str | None = None
     profile: dict[str, Any] | None = None
-    pm25: float | None = Field(default=None, ge=0)
-    pm10: float | None = Field(default=None, ge=0)
-    o3: float | None = Field(default=None, ge=0)
-    no2: float | None = Field(default=None, ge=0)
-    so2: float | None = Field(default=None, ge=0)
-    co: float | None = Field(default=None, ge=0)
+    pm25: float | None = Field(default=None, ge=0, le=500)
+    pm10: float | None = Field(default=None, ge=0, le=800)
+    o3: float | None = Field(default=None, ge=0, le=500)
+    no2: float | None = Field(default=None, ge=0, le=500)
+    so2: float | None = Field(default=None, ge=0, le=500)
+    co: float | None = Field(default=None, ge=0, le=50000)
     temp: float | None = Field(default=None, ge=-10, le=55)
     humidity: float | None = Field(default=None, ge=0, le=100)
-    wind_speed: float | None = Field(default=None, ge=0)
+    wind_speed: float | None = Field(default=None, ge=0, le=150)
+    pm25_lag_24h: float | None = Field(default=None, ge=0, le=500)
+    pm25_roll_24h: float | None = Field(default=None, ge=0, le=500)
+    pm25_lag_168h: float | None = Field(default=None, ge=0, le=500)
     wind_dir: float | None = Field(default=None, ge=0, le=360)
     precip: float | None = Field(default=None, ge=0)
     pressure: float | None = Field(default=None, ge=850, le=1100)
