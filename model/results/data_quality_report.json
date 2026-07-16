@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "rows": 98907,
+  "columns": 76,
+  "cities": [
+    "Hà Nội",
+    "TP.HCM",
+    "Đà Nẵng"
+  ],
+  "start_time": "2022-08-05T07:00:00",
+  "end_time": "2026-05-09T23:00:00",
+  "duplicate_city_time_rows": 0,
+  "invalid_datetimes": 0,
+  "unknown_cities": [],
+  "non_hourly_gaps": 0,
+  "overall_missing_rate": 0.0003551981047586967,
+  "exact_target_rows_24h": 98835,
+  "target_coverage": 0.9992720434347417,
+  "range_violations": {
+    "pm25": 0,
+    "pm10": 0,
+    "o3": 0,
+    "no2": 0,
+    "so2": 0,
+    "co": 0,
+    "temp": 0,
+    "humidity": 0,
+    "wind_speed": 0,
+    "wind_dir": 0,
+    "precip": 0,
+    "pressure": 0,
+    "cloud_cover": 0
+  },
+  "required_source_missing": {
+    "pm25": 0,
+    "pm10": 0,
+    "o3": 0,
+    "no2": 0,
+    "so2": 0,
+    "co": 0,
+    "temp": 0,
+    "humidity": 0,
+    "wind_speed": 0,
+    "wind_dir": 0,
+    "precip": 0,
+    "pressure": 0,
+    "cloud_cover": 0
+  },
+  "source_path": "data\\processed\\pm25_training_data_enriched.csv",
+  "source_sha256": "542244ac669f2f42a4a672422cb6e98624400b205f4d43509cefb7282ca0b053",
+  "source_limitations": [
+    "Open-Meteo air quality values for Vietnam are CAMS Global gridded model data, not ground-station measurements.",
+    "Each city is represented by one grid point near its centre; results must not be interpreted at district level."
+  ],
+  "passed": true
+}

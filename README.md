@@ -14,25 +14,27 @@ Hệ thống dự báo trực tiếp nồng độ PM2.5 tại đúng `t + 24 gi�
 | Tỷ lệ chia theo thời gian | 70/15/15, purge gap 24 giờ |
 | Mô hình so sánh | SARIMAX, XGBoost, LSTM |
 | Mô hình được chọn | XGBoost 3.0.0 |
-| Validation RMSE | 18,156 µg/m³ |
-| Test RMSE | 16,042 µg/m³ |
-| Test MAE | 10,285 µg/m³ |
-| Test R² | 0,581 |
+| Validation RMSE | 18,095 µg/m³ |
+| Test RMSE | 15,957 µg/m³ |
+| Test MAE | 10,232 µg/m³ |
+| Test R² | 0,586 |
 | Độ phủ conformal 90% trên Test | 92,7% |
 
 Mô hình chỉ được chọn bằng Validation RMSE. Test không tham gia chọn mô hình hoặc siêu tham số.
 
 ## Pipeline dữ liệu và mô hình
 
-Chạy notebook theo đúng thứ tự sau bằng Jupyter hoặc VS Code:
+Chạy EDA trước tại `code/notebook.ipynb`. Notebook này chỉ phân tích và trực quan hóa, không biến đổi dữ liệu cho model.
 
-1. `models/0_data_preprocessing.ipynb`: làm sạch dữ liệu, nội suy theo từng thành phố, tạo lag/rolling/feature và lưu dữ liệu huấn luyện.
-2. `models/1_baseline_sarimax.ipynb`: huấn luyện SARIMAX cho cả ba thành phố.
-3. `models/2_xgboost_tuning.ipynb`: tinh chỉnh và huấn luyện XGBoost.
-4. `models/3_lstm_deeplearning.ipynb`: huấn luyện LSTM với cửa sổ 48 giờ.
-5. `models/4_original_model_selection.ipynb`: so sánh bằng Validation RMSE, phân tích lỗi và tạo `models/pm25_24h_best.joblib`.
+Sau đó chạy notebook model theo đúng thứ tự:
 
-Mỗi notebook model tự tạo target t+24, tự chia Train/Validation/Test và tự tính metric. Notebook không import `backend` hay `scripts`. Backend chỉ load saved model sau khi bước 5 hoàn tất.
+1. `model/0_data_preprocessing.ipynb`: làm sạch dữ liệu, nội suy theo từng thành phố, tạo lag/rolling/feature và lưu dữ liệu huấn luyện.
+2. `model/1_baseline_sarimax.ipynb`: huấn luyện SARIMAX cho cả ba thành phố.
+3. `model/2_xgboost_tuning.ipynb`: tinh chỉnh và huấn luyện XGBoost.
+4. `model/3_lstm_deeplearning.ipynb`: huấn luyện LSTM với cửa sổ 48 giờ.
+5. `model/4_original_model_selection.ipynb`: so sánh bằng Validation RMSE, phân tích lỗi và tạo `model/pm25_24h_best.joblib`.
+
+Mỗi notebook model tự tạo target t+24, tự chia Train/Validation/Test và tự tính metric. Notebook model không import `web/backend`. Backend chỉ load saved model sau khi bước 5 hoàn tất.
 
 Để crawl lại snapshot cho ba thành phố trước bước tiền xử lý:
 
@@ -48,10 +50,11 @@ Yêu cầu Python 3.11+ và Node.js 20+.
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cd frontend
+cd web/frontend
 npm ci
 npm run build
-cd ..
+cd ../..
+cd web
 uvicorn backend.api:app --host 0.0.0.0 --port 8000
 ```
 
@@ -70,7 +73,7 @@ Các endpoint chính:
 
 ## Kiểm tra frontend
 
-    cd frontend
+    cd web/frontend
     npm run build
 
 ## Trải nghiệm web
@@ -82,20 +85,29 @@ Các endpoint chính:
 
 ## Cloud
 
-Repo có `Dockerfile` và `render.yaml`. Tạo Render Blueprint từ repo; một container phục vụ cả React build và FastAPI. Health check là `/api/health`.
+Repo có `web/Dockerfile` và `render.yaml` ở root. Render dùng repository root làm build context và Dockerfile trong thư mục `web`; một container phục vụ cả React build và FastAPI. Health check là `/api/health`.
 
 ```powershell
-docker build -t aqi-vietnam .
+docker build -f web/Dockerfile -t aqi-vietnam .
 docker run --rm -p 8000:8000 aqi-vietnam
 ```
 
 ## Cấu trúc
 
 ```text
-data/             snapshot đã crawl và dữ liệu đã tiền xử lý
-models/           5 notebook chuẩn, saved model và kết quả
-backend/          inference service và FastAPI; không huấn luyện model
-frontend/         React/Vite desktop webapp
+code/             notebook EDA, phân tích PM2.5/AQI và utils
+data/
+  raw/            dữ liệu lấy từ API và manifest
+  processed/      dữ liệu hợp nhất, làm sạch và runtime
+figures/          hình đánh giá mô hình
+model/            preprocessing, 3 model, chọn model và saved artifact
+web/
+  backend/        FastAPI và inference service
+  frontend/       React/Vite desktop webapp
+  Dockerfile      image triển khai cloud
+main.py           crawler Open-Meteo
+requirements*.txt dependency local và phát triển
+render.yaml       Render Blueprint dùng web/Dockerfile
 ```
 
 ## Giới hạn

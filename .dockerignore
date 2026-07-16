@@ -1,5 +1,5 @@
-frontend/node_modules
-frontend/dist
+web/frontend/node_modules
+web/frontend/dist
 cloud-site/node_modules
 cloud-site/dist
 screenshots
@@ -16,7 +16,7 @@ data/processed/all_cities.csv
 data/processed/merged_*.csv
 data/processed/pm25_training_data.csv
 data/processed/pm25_training_data_enriched.csv
-models/*.ipynb
+model/*.ipynb
 __pycache__
 *.pyc
 *.log

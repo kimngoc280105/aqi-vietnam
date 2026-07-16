@@ -4,3 +4,5 @@ services:
     runtime: docker
     plan: free
     healthCheckPath: /api/health
+    dockerfilePath: ./web/Dockerfile
+    dockerContext: .

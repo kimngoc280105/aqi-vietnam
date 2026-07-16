@@ -1,0 +1,11 @@
+{
+  "selection_rule": "lowest validation RMSE; test metrics are reporting only",
+  "target": "PM2.5 concentration exactly 24 hours ahead",
+  "same_rows_and_split_for_all_variants": true,
+  "train_rows": 68829,
+  "validation_rows": 14679,
+  "test_rows": 14679,
+  "selected_feature_set": "enriched_full",
+  "selected_validation_rmse_ug_m3": 18.244111498359413,
+  "selected_test_rmse_ug_m3": 16.11897739515745
+}
