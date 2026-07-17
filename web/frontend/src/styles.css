@@ -5153,3 +5153,125 @@ body,
     grid-template-columns: minmax(330px, 0.78fr) minmax(0, 1.42fr);
   }
 }
+
+/* City colors identify data series and stay independent from AQI severity. */
+.compare-chart .compare-line {
+  stroke-width: 3;
+}
+
+.compare-chart .chart-legend span::before {
+  display: none;
+}
+
+.compare-chart .chart-legend i {
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.compare-table-wrap {
+  overflow: hidden;
+  border-color: #d6e0e2;
+}
+
+.compare-table {
+  min-width: 820px;
+  table-layout: fixed;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 15px 18px;
+  border-right: 1px solid #e1e8e9;
+  background: #ffffff;
+  vertical-align: middle;
+}
+
+.compare-table th:last-child,
+.compare-table td:last-child {
+  border-right: 0;
+}
+
+.compare-table thead th {
+  background: #f3f6f7;
+}
+
+.compare-table tbody tr:nth-child(even) td {
+  background: #f9fbfb;
+}
+
+.compare-metric-label {
+  width: 22%;
+}
+
+.compare-metric-label strong,
+.compare-metric-label small {
+  display: block;
+}
+
+.compare-metric-label strong {
+  color: #1d3036;
+  font-size: 13px;
+}
+
+.compare-metric-label small {
+  margin-top: 3px;
+  color: #788a90;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.city-column-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.city-column-heading i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+.compare-value {
+  min-height: 32px;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.compare-value > strong {
+  color: #17292f;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-value > span {
+  color: #71838a;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.compare-status {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 7px;
+  border: 1px solid #dce5e6;
+  border-radius: 6px;
+  color: #455a61;
+  background: #f4f7f7;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.compare-status i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+}

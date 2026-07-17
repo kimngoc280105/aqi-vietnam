@@ -75,6 +75,12 @@ const CITY_REGIONS = {
   "TP.HCM": "Miền Nam",
   "Đà Nẵng": "Miền Trung",
 };
+const CITY_SERIES_COLORS = {
+  "Hà Nội": "#2379bd",
+  "TP.HCM": "#d6652f",
+  "Đà Nẵng": "#169b72",
+};
+
 
 
 const MANUAL_FORECAST_GROUPS = [
@@ -1861,10 +1867,11 @@ function CompareLineChart({ histories, cities, metric }) {
   const width = 1100;
   const height = 380;
   const pad = { left: 52, right: 26, top: 26, bottom: 38 };
-  const series = cities.map((item) => ({
+  const fallbackColors = ["#2379bd", "#d6652f", "#169b72"];
+  const series = cities.map((item, index) => ({
     city: item.city,
     rows: (histories[item.city] ?? []).slice(-96).map((row) => Number(row[metric])),
-    color: normalizedPredictionCategory(null, item.profile.pm25).color,
+    color: CITY_SERIES_COLORS[item.city] ?? fallbackColors[index % fallbackColors.length],
   }));
   const allValues = series.flatMap((item) => item.rows).filter(Number.isFinite);
   const max = Math.max(60, Math.ceil(Math.max(...allValues, 0) / 10) * 10);
@@ -1874,7 +1881,7 @@ function CompareLineChart({ histories, cities, metric }) {
   const yFor = (value) => pad.top + plotH - (value / max) * plotH;
 
   return (
-    <div className="chart-box">
+    <div className="chart-box compare-chart">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Biểu đồ so sánh nhiều đô thị">
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const y = pad.top + plotH * ratio;
@@ -1942,25 +1949,46 @@ function CompareTable({ cities }) {
     ["Gió", (item) => item.profile.wind_speed, "wind"],
   ];
   return (
-    <div className="table-wrap">
-      <table>
+    <div className="table-wrap compare-table-wrap">
+      <table className="compare-table">
         <thead>
           <tr>
-            <th>Metric</th>
+            <th>Chỉ số</th>
             {cities.map((item) => (
-              <th key={item.city}>{item.city}</th>
+              <th key={item.city}>
+                <span className="city-column-heading">
+                  <i style={{ background: CITY_SERIES_COLORS[item.city] ?? "#708188" }} />
+                  {item.city}
+                </span>
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map(([label, getter, kind]) => (
             <tr key={label}>
-              <td>{label}</td>
+              <td className="compare-metric-label">
+                <strong>{label}</strong>
+                <small>
+                  {{ pm25: "µg/m³", pollutant: "µg/m³", humidity: "%", temp: "°C", wind: "km/h" }[kind]}
+                </small>
+              </td>
               {cities.map((item) => {
                 const value = Number(getter(item));
+                const unit = { pm25: "µg/m³", pollutant: "µg/m³", humidity: "%", temp: "°C", wind: "km/h" }[kind];
+                const category = kind === "pm25" ? categoryFromPm25(value) : null;
                 return (
-                  <td key={item.city} style={{ background: heatColor(value, kind), color: "#08100d" }}>
-                    {fmt(value, kind === "temp" ? 1 : 1)}
+                  <td key={item.city}>
+                    <div className="compare-value">
+                      <strong>{fmt(value, 1)}</strong>
+                      <span>{unit}</span>
+                      {category ? (
+                        <small className="compare-status">
+                          <i style={{ background: category.color }} />
+                          {category.label}
+                        </small>
+                      ) : null}
+                    </div>
                   </td>
                 );
               })}
