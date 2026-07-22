@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+web_2/frontend/node_modules/
+web_2/frontend/dist/
+

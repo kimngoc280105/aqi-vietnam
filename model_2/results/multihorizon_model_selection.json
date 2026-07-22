@@ -1,0 +1,61 @@
+{
+  "selected_model": "XGBoost",
+  "selection_protocol": "five contiguous validation blocks; fixed trained candidates",
+  "selection_metric": "mean of per-fold mean-horizon RMSE",
+  "selected_without_test_metrics": true,
+  "temporal_folds": [
+    {
+      "cv_fold": 1,
+      "first_origin": "2025-03-26 06:00:00",
+      "last_origin": "2025-05-06 00:00:00",
+      "origins": 979,
+      "rows_per_model": 70488
+    },
+    {
+      "cv_fold": 2,
+      "first_origin": "2025-05-06 01:00:00",
+      "last_origin": "2025-06-15 19:00:00",
+      "origins": 979,
+      "rows_per_model": 70488
+    },
+    {
+      "cv_fold": 3,
+      "first_origin": "2025-06-15 20:00:00",
+      "last_origin": "2025-07-26 14:00:00",
+      "origins": 979,
+      "rows_per_model": 70488
+    },
+    {
+      "cv_fold": 4,
+      "first_origin": "2025-07-26 15:00:00",
+      "last_origin": "2025-09-05 08:00:00",
+      "origins": 978,
+      "rows_per_model": 70416
+    },
+    {
+      "cv_fold": 5,
+      "first_origin": "2025-09-05 09:00:00",
+      "last_origin": "2025-10-16 02:00:00",
+      "origins": 978,
+      "rows_per_model": 70416
+    }
+  ],
+  "cross_validation": {
+    "folds": 5,
+    "mean_rmse_ug_m3": 15.80127110070488,
+    "std_rmse_ug_m3": 1.3239402820095947,
+    "worst_fold_rmse_ug_m3": 18.084111666459687,
+    "mean_mae_ug_m3": 9.763671733460551,
+    "fold_wins": 5
+  },
+  "reported_test_metrics": {
+    "mean_horizon_rmse_ug_m3": 14.01252198196599,
+    "mean_horizon_mae_ug_m3": 8.910852071917368,
+    "global_rmse_ug_m3": 14.38441035590196,
+    "global_mae_ug_m3": 8.91085207191737,
+    "global_r2": 0.6649441299479857,
+    "global_bias_ug_m3": -0.2884064127300412
+  },
+  "selected_artifact": "model_2\\candidates\\xgboost_multihorizon.joblib",
+  "deployment_status": "Selected artifact is used by web_2."
+}
