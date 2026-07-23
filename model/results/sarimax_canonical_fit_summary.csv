@@ -1,4 +1,0 @@
-﻿city,order,seasonal_order,aic,converged,converged_initial_fit,retry_used,initial_iterations,retry_iterations,iterations
-Hà Nội,"(0, 0, 0)","(1, 0, 0, 24)",205017.01180416788,True,True,False,86,0,86
-TP.HCM,"(0, 0, 0)","(1, 0, 0, 24)",171438.50941235607,True,False,True,100,1,101
-Đà Nẵng,"(0, 0, 0)","(1, 0, 0, 24)",157744.09768544283,True,True,False,64,0,64

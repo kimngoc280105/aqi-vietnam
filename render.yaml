@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: aqi-vietnam-forecast
+    name: aqi-vietnam-multihorizon
     runtime: docker
     plan: free
     healthCheckPath: /api/health

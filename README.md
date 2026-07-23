@@ -1,6 +1,6 @@
 ﻿# Vietnam PM2.5 Forecast
 
-Hệ thống dự báo trực tiếp nồng độ PM2.5 tại đúng `t + 24 giờ` cho ba điểm lưới đại diện gần trung tâm Hà Nội, TP.HCM và Đà Nẵng. Quy trình chính của dự án là:
+Hệ thống dự báo trực tiếp nồng độ PM2.5 theo từng giờ từ `t+1` đến `t+24` cho ba điểm lưới đại diện gần trung tâm Hà Nội, TP.HCM và Đà Nẵng. Quy trình chính của dự án là:
 
 `crawl dữ liệu -> EDA/tiền xử lý -> huấn luyện 3 mô hình -> chọn model -> local webapp -> cloud`
 
@@ -10,15 +10,14 @@ Hệ thống dự báo trực tiếp nồng độ PM2.5 tại đúng `t + 24 gi�
 
 | Hạng mục | Kết quả |
 |---|---:|
-| Mẫu supervised hợp lệ | 98.331 |
+| Mẫu supervised dùng để chia tập | 98.187 |
 | Tỷ lệ chia theo thời gian | 70/15/15, purge gap 24 giờ |
 | Mô hình so sánh | SARIMAX, XGBoost, LSTM |
-| Mô hình được chọn | XGBoost 3.0.0 |
-| Validation RMSE | 18,095 µg/m³ |
-| Test RMSE | 15,957 µg/m³ |
-| Test MAE | 10,232 µg/m³ |
-| Test R² | 0,586 |
-| Độ phủ conformal 90% trên Test | 92,7% |
+| Mô hình được chọn | XGBoost Direct Multi-Horizon |
+| Temporal-CV RMSE | 15,801 µg/m³ |
+| Test mean-horizon RMSE | 14,013 µg/m³ |
+| Test MAE | 8,911 µg/m³ |
+| Test global R² | 0,665 |
 
 Mô hình chỉ được chọn bằng Validation RMSE. Test không tham gia chọn mô hình hoặc siêu tham số.
 
@@ -26,15 +25,15 @@ Mô hình chỉ được chọn bằng Validation RMSE. Test không tham gia ch�
 
 Chạy EDA trước tại `code/notebook.ipynb`. Notebook này chỉ phân tích và trực quan hóa, không biến đổi dữ liệu cho model.
 
-Sau đó chạy notebook model theo đúng thứ tự:
+Sau đó chạy notebook đa chân trời theo đúng thứ tự:
 
-1. `model/0_data_preprocessing.ipynb`: làm sạch dữ liệu, nội suy theo từng thành phố, tạo lag/rolling/feature và lưu dữ liệu huấn luyện.
-2. `model/1_baseline_sarimax.ipynb`: huấn luyện SARIMAX cho cả ba thành phố.
-3. `model/2_xgboost_tuning.ipynb`: tinh chỉnh và huấn luyện XGBoost.
-4. `model/3_lstm_deeplearning.ipynb`: huấn luyện LSTM với cửa sổ 48 giờ.
-5. `model/4_original_model_selection.ipynb`: so sánh bằng Validation RMSE, phân tích lỗi và tạo `model/pm25_24h_best.joblib`.
+1. `model/0_multihorizon_data_preparation.ipynb`: tạo 24 target đúng timestamp và temporal split.
+2. `model/1_multihorizon_sarimax.ipynb`: huấn luyện SARIMAX đa chân trời.
+3. `model/2_multihorizon_xgboost.ipynb`: huấn luyện 24 XGBoost trực tiếp.
+4. `model/3_multihorizon_lstm.ipynb`: huấn luyện LSTM Sequence-to-Vector.
+5. `model/4_multihorizon_model_selection.ipynb`: lựa chọn bằng năm khối Validation, phân tích model thắng và tạo figures cuối.
 
-Mỗi notebook model tự tạo target t+24, tự chia Train/Validation/Test và tự tính metric. Notebook model không import `web/backend`. Backend chỉ load saved model sau khi bước 5 hoàn tất.
+Thư mục `model_t24/` và `web_t24/` giữ phiên bản một chân trời để đối chiếu. Ứng dụng chính trong `web/` chỉ load saved artifact đa chân trời từ `model/` sau khi bước 5 hoàn tất; notebook model không phụ thuộc backend.
 
 Để crawl lại snapshot cho ba thành phố trước bước tiền xử lý:
 
@@ -49,13 +48,13 @@ Yêu cầu Python 3.11+ và Node.js 20+.
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r web/requirements-runtime.txt
 cd web/frontend
 npm ci
 npm run build
 cd ../..
 cd web
-uvicorn backend.api:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.api:app --host 0.0.0.0 --port 8000
 ```
 
 Mở `http://localhost:8000`. API docs ở `http://localhost:8000/docs`.
@@ -66,9 +65,8 @@ Các endpoint chính:
 - `GET /api/cities`
 - `GET /api/history/{city}`
 - `GET /api/model`
-- `GET /api/model-card`
+- `POST /api/forecast`
 - `POST /api/predict`
-- `POST /api/scenarios`
 - `POST /api/activity-plan`
 
 ## Kiểm tra frontend
@@ -78,14 +76,15 @@ Các endpoint chính:
 
 ## Trải nghiệm web
 
-- **Dự báo tự động:** web lấy snapshot gần nhất từ Open-Meteo/CAMS và trình bày PM2.5 hiện tại, dự báo t+24, khoảng 90% và so sánh ba thành phố như một bản tin thời tiết.
-- **Dự đoán nhập tay:** người dùng thay các chỉ số ô nhiễm, thời tiết và lịch sử PM2.5 rồi chạy cùng model XGBoost để tạo kịch bản riêng.
-- **Preset kịch bản:** có thể nạp dữ liệu hiện tại, mô phỏng ô nhiễm tăng hoặc gió thông thoáng; kết quả nhập tay được so trực tiếp với dự báo tự động.
+- **Dự báo tự động:** web lấy snapshot gần nhất từ Open-Meteo/CAMS, cho chọn horizon 1--24 giờ, hiển thị dự báo điểm, khoảng conformal và so sánh ba thành phố.
+- **Dự đoán nhập tay:** người dùng thay các chỉ số quan sát dễ hiểu; lag và rolling được backend lấy tự động từ profile lịch sử.
 - **Activity Planner:** kết hợp dự báo điểm và khoảng conformal để so sánh thời điểm hoạt động; không phải khuyến cáo y khoa.
 
 ## Cloud
 
 Repo có `web/Dockerfile` và `render.yaml` ở root. Render dùng repository root làm build context và Dockerfile trong thư mục `web`; một container phục vụ cả React build và FastAPI. Health check là `/api/health`.
+
+Ứng dụng công khai: <https://aqi-vietnam-multihorizon.onrender.com>
 
 ```powershell
 docker build -f web/Dockerfile -t aqi-vietnam .
@@ -100,11 +99,13 @@ data/
   raw/            dữ liệu lấy từ API và manifest
   processed/      dữ liệu hợp nhất, làm sạch và runtime
 figures/          hình đánh giá mô hình
-model/            preprocessing, 3 model, chọn model và saved artifact
+model/            preprocessing đa target, 3 model, chọn model và saved artifact
+model_t24/        phiên bản đối chiếu dự báo riêng t+24
 web/
   backend/        FastAPI và inference service
   frontend/       React/Vite desktop webapp
   Dockerfile      image triển khai cloud
+web_t24/          ứng dụng t+24 cũ để tái lập report đối chiếu
 main.py           crawler Open-Meteo
 requirements*.txt dependency local và phát triển
 render.yaml       Render Blueprint dùng web/Dockerfile

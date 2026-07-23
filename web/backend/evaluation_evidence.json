@@ -1,0 +1,234 @@
+{
+  "comparison_by_city": [
+    {
+      "model": "XGBoost",
+      "city": "Hà Nội",
+      "rmse_ug_m3": 21.874948906516,
+      "mae_ug_m3": 15.26862688330581,
+      "r2": 0.523115012293573,
+      "bucket_f1_macro": 0.3489814721899205
+    },
+    {
+      "model": "XGBoost",
+      "city": "TP.HCM",
+      "rmse_ug_m3": 9.89520903955398,
+      "mae_ug_m3": 6.932587836843492,
+      "r2": 0.37882999064199585,
+      "bucket_f1_macro": 0.26932457884875266
+    },
+    {
+      "model": "XGBoost",
+      "city": "Đà Nẵng",
+      "rmse_ug_m3": 6.656217564186302,
+      "mae_ug_m3": 4.5313414956028,
+      "r2": 0.5672706753014591,
+      "bucket_f1_macro": 0.3251284173933571
+    },
+    {
+      "model": "LSTM",
+      "city": "Hà Nội",
+      "rmse_ug_m3": 23.280296648918554,
+      "mae_ug_m3": 16.44009090887525,
+      "r2": 0.4598721430377589,
+      "bucket_f1_macro": 0.29450296701162576
+    },
+    {
+      "model": "LSTM",
+      "city": "TP.HCM",
+      "rmse_ug_m3": 10.79916698368464,
+      "mae_ug_m3": 8.419504194050445,
+      "r2": 0.26015448391019025,
+      "bucket_f1_macro": 0.2501680763970719
+    },
+    {
+      "model": "LSTM",
+      "city": "Đà Nẵng",
+      "rmse_ug_m3": 6.860860200819081,
+      "mae_ug_m3": 4.821861800330318,
+      "r2": 0.5402534811115255,
+      "bucket_f1_macro": 0.24638330234130668
+    },
+    {
+      "model": "SARIMAX",
+      "city": "Hà Nội",
+      "rmse_ug_m3": 25.353867528259453,
+      "mae_ug_m3": 17.71981947616982,
+      "r2": 0.35936894111522066,
+      "bucket_f1_macro": 0.34124567464181527
+    },
+    {
+      "model": "SARIMAX",
+      "city": "TP.HCM",
+      "rmse_ug_m3": 10.60009259628055,
+      "mae_ug_m3": 7.265786898952803,
+      "r2": 0.287180041796139,
+      "bucket_f1_macro": 0.2541862960811377
+    },
+    {
+      "model": "SARIMAX",
+      "city": "Đà Nẵng",
+      "rmse_ug_m3": 6.962183364082037,
+      "mae_ug_m3": 4.5581269577009005,
+      "r2": 0.5265738707994818,
+      "bucket_f1_macro": 0.3332099765166438
+    }
+  ],
+  "confusion_matrix": [
+    {
+      "label": "Good",
+      "Good": 1736,
+      "Moderate": 11213,
+      "USG": 383,
+      "Unhealthy": 58,
+      "Very Unhealthy": 0,
+      "Hazardous": 0
+    },
+    {
+      "label": "Moderate",
+      "Good": 433,
+      "Moderate": 212396,
+      "USG": 24648,
+      "Unhealthy": 2367,
+      "Very Unhealthy": 0,
+      "Hazardous": 0
+    },
+    {
+      "label": "USG",
+      "Good": 0,
+      "Moderate": 18686,
+      "USG": 28094,
+      "Unhealthy": 6681,
+      "Very Unhealthy": 0,
+      "Hazardous": 0
+    },
+    {
+      "label": "Unhealthy",
+      "Good": 0,
+      "Moderate": 3587,
+      "USG": 13271,
+      "Unhealthy": 24448,
+      "Very Unhealthy": 105,
+      "Hazardous": 0
+    },
+    {
+      "label": "Very Unhealthy",
+      "Good": 0,
+      "Moderate": 30,
+      "USG": 212,
+      "Unhealthy": 3606,
+      "Very Unhealthy": 342,
+      "Hazardous": 0
+    },
+    {
+      "label": "Hazardous",
+      "Good": 0,
+      "Moderate": 0,
+      "USG": 0,
+      "Unhealthy": 0,
+      "Very Unhealthy": 0,
+      "Hazardous": 0
+    }
+  ],
+  "top_error_cases": [
+    {
+      "datetime": "2026-04-24 06:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 24,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 50.17960357666016,
+      "abs_error_ug_m3": 136.52039642333983,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 11:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 19,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 50.987770080566406,
+      "abs_error_ug_m3": 135.71222991943358,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 08:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 22,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 53.72734069824219,
+      "abs_error_ug_m3": 132.9726593017578,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 12:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 18,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 53.85417175292969,
+      "abs_error_ug_m3": 132.8458282470703,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 07:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 23,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 53.901649475097656,
+      "abs_error_ug_m3": 132.79835052490233,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 14:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 16,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 54.246726989746094,
+      "abs_error_ug_m3": 132.4532730102539,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 15:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 15,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 54.99842071533203,
+      "abs_error_ug_m3": 131.70157928466796,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 17:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 13,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 55.06789016723633,
+      "abs_error_ug_m3": 131.63210983276366,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 05:00:00",
+      "target_time": "2026-04-25 05:00:00",
+      "city": "Hà Nội",
+      "horizon": 24,
+      "actual_pm25": 181.6,
+      "predicted_pm25": 50.23346328735352,
+      "abs_error_ug_m3": 131.36653671264648,
+      "diagnostic_label": "missed_pollution_spike"
+    },
+    {
+      "datetime": "2026-04-24 09:00:00",
+      "target_time": "2026-04-25 06:00:00",
+      "city": "Hà Nội",
+      "horizon": 21,
+      "actual_pm25": 186.7,
+      "predicted_pm25": 55.750282287597656,
+      "abs_error_ug_m3": 130.94971771240233,
+      "diagnostic_label": "missed_pollution_spike"
+    }
+  ]
+}

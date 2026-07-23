@@ -1,0 +1,164 @@
+{
+  "method": "Extracted existing image/png outputs from the current notebooks without running training.",
+  "root": "aqi-vietnam4",
+  "notebooks_scanned": [
+    "code/notebook.ipynb",
+    "code/pm25_vs_aqi_prediction_analysis.ipynb",
+    "model_t24/0_data_preprocessing.ipynb",
+    "model_t24/1_baseline_sarimax.ipynb",
+    "model_t24/2_xgboost_tuning.ipynb",
+    "model_t24/3_lstm_deeplearning.ipynb",
+    "model_t24/4_original_model_selection.ipynb"
+  ],
+  "notebooks_without_image_outputs": [
+    "model_t24/0_data_preprocessing.ipynb"
+  ],
+  "figures": [
+    {
+      "file": "eda_feature_distributions.png",
+      "source_notebook": "code/notebook.ipynb",
+      "cell_index": 21,
+      "output_type": "image/png",
+      "sha256": "5ad527c0e16722af15f96fb9ca4d748929cf668e033ed5d11f6eb67a27308022"
+    },
+    {
+      "file": "eda_pm25_aqi_distributions.png",
+      "source_notebook": "code/notebook.ipynb",
+      "cell_index": 23,
+      "output_type": "image/png",
+      "sha256": "52397505330bc7aab5ead5699f44d19a3c511d5538c4e2ed508c15b36ac6bb64"
+    },
+    {
+      "file": "eda_pm25_aqi_boxplots.png",
+      "source_notebook": "code/notebook.ipynb",
+      "cell_index": 26,
+      "output_type": "image/png",
+      "sha256": "2fd703aa47781636219cbd1dfd28f2e376ff1beefe4facfc41c882f68b4d81ff"
+    },
+    {
+      "file": "eda_correlation_heatmap.png",
+      "source_notebook": "code/notebook.ipynb",
+      "cell_index": 28,
+      "output_type": "image/png",
+      "sha256": "fa342a263c3fa3646c24b3871c2919d0ac1274f501c9e3474e9de8c2b401e898"
+    },
+    {
+      "file": "eda_pm25_outliers.png",
+      "source_notebook": "code/notebook.ipynb",
+      "cell_index": 31,
+      "output_type": "image/png",
+      "sha256": "b5f9dc4b6cb3f6c392534150c1c01c8b3f3e9dff76555eba52ba91012ed98436"
+    },
+    {
+      "file": "eda_pm25_temporal_patterns.png",
+      "source_notebook": "code/notebook.ipynb",
+      "cell_index": 34,
+      "output_type": "image/png",
+      "sha256": "1e6c88555e005004ee42083742fea4c296e080c861bcdbffdade8fbb6d7ccf9f"
+    },
+    {
+      "file": "pm25_aqi_timeseries.png",
+      "source_notebook": "code/pm25_vs_aqi_prediction_analysis.ipynb",
+      "cell_index": 5,
+      "output_type": "image/png",
+      "sha256": "a555609c722591af8956be31fd0d380c9c5135ee646927e65257092421c3c75f"
+    },
+    {
+      "file": "pm25_aqi_hourly_profile.png",
+      "source_notebook": "code/pm25_vs_aqi_prediction_analysis.ipynb",
+      "cell_index": 10,
+      "output_type": "image/png",
+      "sha256": "f78b6aa89e3a4348e7b81fe2f1e7fba4987700c7b6038ec7825538b370d74801"
+    },
+    {
+      "file": "pm25_aqi_autocorrelation.png",
+      "source_notebook": "code/pm25_vs_aqi_prediction_analysis.ipynb",
+      "cell_index": 13,
+      "output_type": "image/png",
+      "sha256": "1bea54e61ca1f03f34194f33e506e1a0b14226c966b385f0bccc131bdbba59ac"
+    },
+    {
+      "file": "sarimax_test_forecast.png",
+      "source_notebook": "model_t24/1_baseline_sarimax.ipynb",
+      "cell_index": 12,
+      "output_type": "image/png",
+      "sha256": "20cfe417c01172431fe1a65c40af0e6b9f778038cbb9616aa6a4ebb9f809c0e1"
+    },
+    {
+      "file": "xgboost_tuning_learning_curve.png",
+      "source_notebook": "model_t24/2_xgboost_tuning.ipynb",
+      "cell_index": 9,
+      "output_type": "image/png",
+      "sha256": "6711ec0c2634f541f12a9c64f4288ecfcbc7e9492097a81194566d9156819cc1"
+    },
+    {
+      "file": "lstm_canonical_architecture.png",
+      "source_notebook": "model_t24/3_lstm_deeplearning.ipynb",
+      "cell_index": 7,
+      "output_type": "image/png",
+      "sha256": "7b0edb08868d3e475e48e22ecec2dfa011ea3d111e8e555a0ad7e59bc48e2826"
+    },
+    {
+      "file": "lstm_training_curves.png",
+      "source_notebook": "model_t24/3_lstm_deeplearning.ipynb",
+      "cell_index": 9,
+      "output_type": "image/png",
+      "sha256": "34eb99ff1783bde1ba64c9b8a221437d376d3e2a7e098839f51e314b4555bce8"
+    },
+    {
+      "file": "model_suite_comparison.png",
+      "source_notebook": "model_t24/4_original_model_selection.ipynb",
+      "cell_index": 9,
+      "output_type": "image/png",
+      "sha256": "20a684f9b102a45b30002009d88f398b622bb661e6108d89145e73cfc545266d"
+    },
+    {
+      "file": "model_suite_rmse_by_city.png",
+      "source_notebook": "model_t24/4_original_model_selection.ipynb",
+      "cell_index": 14,
+      "output_type": "image/png",
+      "sha256": "b79480df198edbe04bc4bf6f676bcc78c4788daaf8d76596a7f096c814c0385e"
+    },
+    {
+      "file": "xgboost_selection_learning_curve.png",
+      "source_notebook": "model_t24/4_original_model_selection.ipynb",
+      "cell_index": 20,
+      "output_type": "image/png",
+      "sha256": "ea1ceab69f38b66ccead4752465b787648574ddfbbfba42ebc193a6a6e8815c4"
+    },
+    {
+      "file": "lstm_selection_learning_curves.png",
+      "source_notebook": "model_t24/4_original_model_selection.ipynb",
+      "cell_index": 23,
+      "output_type": "image/png",
+      "sha256": "59732f20aaf82e2d7b680e074ed5ffe8e0a530e605ab5499b9fcd896de25229e"
+    },
+    {
+      "file": "xgboost_confusion_matrix.png",
+      "source_notebook": "model_t24/4_original_model_selection.ipynb",
+      "cell_index": 27,
+      "output_type": "image/png",
+      "sha256": "4621b66a893d9e3880065176a1d396042b29c80cab69cd300831db75887822ad"
+    },
+    {
+      "file": "best_model_test_forecast.png",
+      "source_notebook": "model_t24/4_original_model_selection.ipynb",
+      "cell_index": null,
+      "output_type": "image/png",
+      "source_note": "Generated from test predictions; the notebook generation cell has not yet been executed to embed this output.",
+      "sha256": "48e828808bc4a718e838ae403dba659cd787060b587ab46d3337fcc91b817c00"
+    },
+    {
+      "file": "web_overview_status_table.png",
+      "source_note": "user-provided screenshot of the running local webapp",
+      "output_type": "image/png",
+      "sha256": "69cef351dbde580cabcbe1f6b99e77cc3ecb11f3d86a10ad871803c19c971f27"
+    },
+    {
+      "file": "web_multi_city_trend.png",
+      "source_note": "user-provided screenshot of the running local webapp",
+      "output_type": "image/png",
+      "sha256": "738811174132bd67accd3464b769b0391644b4ce71a09bf3ebb8e3b66ea826b4"
+    }
+  ]
+}

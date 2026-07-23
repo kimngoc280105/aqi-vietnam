@@ -1,5 +1,7 @@
 web/frontend/node_modules
 web/frontend/dist
+web_t24/frontend/node_modules
+web_t24/frontend/dist
 cloud-site/node_modules
 cloud-site/dist
 screenshots
@@ -16,7 +18,17 @@ data/processed/all_cities.csv
 data/processed/merged_*.csv
 data/processed/pm25_training_data.csv
 data/processed/pm25_training_data_enriched.csv
+!data/processed/pm25_training_data_enriched.csv
 model/*.ipynb
+model/candidates/*
+!model/candidates/xgboost_multihorizon.joblib
+model/results/*
+!model/results/multihorizon_model_comparison.csv
+!model/results/multihorizon_model_comparison_by_horizon.csv
+!model/results/xgboost_multihorizon_learning_curves.csv
+!model/results/multihorizon_model_selection.json
+!model/results/multihorizon_temporal_split.json
+model_t24/*.ipynb
 __pycache__
 *.pyc
 *.log
