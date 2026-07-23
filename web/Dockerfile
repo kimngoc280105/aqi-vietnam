@@ -1,13 +1,9 @@
-FROM node:20-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-build
 
-WORKDIR /frontend
-
+WORKDIR /build/frontend
 COPY web/frontend/package*.json ./
 RUN npm ci
-
-COPY web/frontend/index.html ./index.html
-COPY web/frontend/vite.config.js ./vite.config.js
-COPY web/frontend/src ./src
+COPY web/frontend/ ./
 RUN npm run build
 
 FROM python:3.11-slim
@@ -18,31 +14,21 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+COPY web/requirements-runtime.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-COPY web/requirements-runtime.txt ./web/
-RUN pip install --no-cache-dir -r web/requirements-runtime.txt
-
-COPY web/backend ./web/backend
-COPY --from=frontend-builder /frontend/dist ./web/frontend/dist
-COPY data/raw/crawl_manifest.json ./data/raw/
-COPY data/processed/inference_history.csv data/processed/inference_history_metadata.json ./data/processed/
-COPY model/pm25_24h_best.joblib model/pm25_24h_best_metadata.json ./model/
-COPY model/results ./model/results
-
-RUN addgroup --system appgroup \
-    && adduser --system --ingroup appgroup appuser \
-    && chown -R appuser:appgroup /app
-
-USER appuser
+COPY data/processed/pm25_training_data_enriched.csv data/processed/pm25_training_data_enriched.csv
+COPY data/raw/crawl_manifest.json data/raw/crawl_manifest.json
+COPY model/candidates/xgboost_multihorizon.joblib model/candidates/xgboost_multihorizon.joblib
+COPY model/results/multihorizon_model_comparison.csv model/results/multihorizon_model_comparison.csv
+COPY model/results/multihorizon_model_comparison_by_horizon.csv model/results/multihorizon_model_comparison_by_horizon.csv
+COPY model/results/xgboost_multihorizon_learning_curves.csv model/results/xgboost_multihorizon_learning_curves.csv
+COPY model/results/multihorizon_model_selection.json model/results/multihorizon_model_selection.json
+COPY model/results/multihorizon_temporal_split.json model/results/multihorizon_temporal_split.json
+COPY web/backend web/backend
+COPY --from=frontend-build /build/frontend/dist web/frontend/dist
 
 WORKDIR /app/web
 
 EXPOSE 8000
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:' + __import__('os').environ.get('PORT', '8000') + '/api/health', timeout=4)" || exit 1
-
-CMD ["sh", "-c", "uvicorn backend.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn backend.api:app --host 0.0.0.0 --port ${PORT}"]

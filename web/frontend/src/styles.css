@@ -4076,6 +4076,48 @@ body,
   align-items: stretch;
 }
 
+.forecast-head-controls {
+  min-width: 460px;
+  display: grid;
+  gap: 8px;
+}
+
+.horizon-selector {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.horizon-selector span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.horizon-selector select {
+  width: 142px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #cbd9d6;
+  border-radius: 6px;
+  color: var(--text);
+  background: #f7f9f9;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.horizon-selector select:focus-visible {
+  outline: 2px solid rgba(22, 155, 114, 0.35);
+  outline-offset: 2px;
+}
+
 .forecast-mode-switch {
   min-width: 460px;
   display: grid;
@@ -4713,6 +4755,10 @@ body,
 }
 
 @media (max-width: 1350px) {
+  .forecast-head-controls {
+    min-width: 410px;
+  }
+
   .forecast-mode-switch {
     min-width: 410px;
   }

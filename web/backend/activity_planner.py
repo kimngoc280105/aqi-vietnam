@@ -108,6 +108,7 @@ def _action_plan(
 def build_activity_plan(
     *,
     city: str,
+    horizon_hours: int = 24,
     current_pm25: float,
     forecast_pm25: float,
     forecast_lower: float,
@@ -116,6 +117,8 @@ def build_activity_plan(
     activity: str,
     duration_minutes: int,
 ) -> dict[str, Any]:
+    if not 1 <= int(horizon_hours) <= 24:
+        raise ValueError("Horizon must be between 1 and 24 hours.")
     if group not in GROUP_LABELS:
         raise ValueError(f"Unsupported health group: {group}")
     if activity not in ACTIVITY_PROFILES:
@@ -155,7 +158,7 @@ def build_activity_plan(
 
     timing_labels = {
         "now": "Ưu tiên thời điểm hiện tại",
-        "after_24h": "Cân nhắc sau 24 giờ",
+        "after_24h": f"Cân nhắc sau {horizon_hours} giờ",
         "flexible": "Chưa có thời điểm vượt trội",
     }
     confidence_labels = {
@@ -169,6 +172,7 @@ def build_activity_plan(
     )
     return {
         "city": city,
+        "horizon_hours": int(horizon_hours),
         "timing": timing,
         "timing_label": timing_labels[timing],
         "confidence": confidence,
@@ -204,7 +208,10 @@ def build_activity_plan(
         "method": {
             "name": "uncertainty_aware_activity_planner_v1",
             "load_definition": "PM2.5 concentration x duration in hours x relative activity intensity",
-            "decision_basis": "Current PM2.5 versus the city-conditioned 90% conformal forecast interval",
+            "decision_basis": (
+                f"Current PM2.5 versus the city-and-horizon-conditioned 90% conformal "
+                f"forecast interval at t+{horizon_hours}"
+            ),
             "limitations": (
                 "Công cụ hỗ trợ lập kế hoạch, không phải ước tính liều hít vào, chẩn đoán y khoa "
                 "hoặc khuyến cáo của cơ quan quản lý."

@@ -103,14 +103,6 @@ const MANUAL_FORECAST_GROUPS = [
       ["wind_speed", "Tốc độ gió", "km/h", 0, 150, 0.1],
     ],
   },
-  {
-    title: "Lịch sử PM2.5",
-    fields: [
-      ["pm25_lag_24h", "Cùng giờ hôm qua", "µg/m³", 0, 500, 0.1],
-      ["pm25_roll_24h", "Trung bình 24 giờ", "µg/m³", 0, 500, 0.1],
-      ["pm25_lag_168h", "Cùng giờ tuần trước", "µg/m³", 0, 500, 0.1],
-    ],
-  },
 ];
 
 const MANUAL_FORECAST_FIELDS = MANUAL_FORECAST_GROUPS.flatMap((group) => group.fields);
@@ -132,6 +124,7 @@ function normalizeCityName(value = "") {
 }
 
 function fmt(value, digits = 1) {
+  if (value === null || value === undefined || value === "") return "N/A";
   const number = Number(value);
   if (!Number.isFinite(number)) return "N/A";
   return number.toLocaleString("vi-VN", {
@@ -251,6 +244,8 @@ export default function App() {
   const [model, setModel] = useState(null);
   const [cities, setCities] = useState([]);
   const [selectedCity, setSelectedCity] = useState("");
+  const [selectedHorizon, setSelectedHorizon] = useState(24);
+  const [horizonLoading, setHorizonLoading] = useState(false);
   const [predictions, setPredictions] = useState({});
   const [histories, setHistories] = useState({});
   const [refreshing, setRefreshing] = useState(false);
@@ -293,7 +288,10 @@ export default function App() {
         Promise.allSettled(
           normalizedCities.map(async (item) => [
             item.city,
-            await postJson("/api/predict", profilePayload(item.profile)),
+            await postJson("/api/predict", {
+              ...profilePayload(item.profile),
+              horizon: selectedHorizon,
+            }),
           ]),
         ),
         Promise.allSettled(
@@ -332,6 +330,34 @@ export default function App() {
     }
   }
 
+  async function changeHorizon(value) {
+    const horizon = Number(value);
+    if (!Number.isInteger(horizon) || horizon < 1 || horizon > 24 || horizon === selectedHorizon) return;
+    setSelectedHorizon(horizon);
+    setHorizonLoading(true);
+    setPredictions({});
+    try {
+      const results = await Promise.allSettled(
+        cities.map(async (item) => [
+          item.city,
+          await postJson("/api/predict", {
+            ...profilePayload(item.profile),
+            horizon,
+          }),
+        ]),
+      );
+      const entries = results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+      if (!entries.length) throw new Error("No horizon prediction was available");
+      setPredictions(Object.fromEntries(entries));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setHorizonLoading(false);
+    }
+  }
+
   const viewProps = {
     model,
     cities,
@@ -342,6 +368,9 @@ export default function App() {
     selectedProfile,
     selectedHistory,
     selectedPrediction,
+    selectedHorizon,
+    horizonLoading,
+    onHorizonChange: changeHorizon,
     selectedForecastCategory,
     forecastMode,
     setForecastMode,
@@ -487,7 +516,7 @@ function ModelEvidence({ model }) {
         <KpiCard label="Model được chọn" value={selectedModel} suffix="theo Validation RMSE" icon={Brain} tone="mint" />
         <KpiCard label="Validation RMSE" value={fmt(selectedRow.val_rmse_ug_m3, 2)} suffix="µg/m³" icon={LineChart} tone="blue" />
         <KpiCard label="Test RMSE" value={fmt(selectedRow.test_rmse_ug_m3, 2)} suffix="µg/m³" icon={BarChart3} tone="yellow" />
-        <KpiCard label="Test R²" value={fmt(selectedRow.test_r2, 3)} suffix="hồi quy t + 24h" icon={Gauge} tone="green" />
+        <KpiCard label="Test R²" value={fmt(selectedRow.test_r2, 3)} suffix="hồi quy t+1 đến t+24" icon={Gauge} tone="green" />
       </div>
 
       <Panel title="So sánh ba mô hình" eyebrow="Chọn theo Validation RMSE · Test không dùng để chọn model">
@@ -526,7 +555,7 @@ function ModelEvidence({ model }) {
         <Panel title="Giao thức thực nghiệm" eyebrow="Không rò rỉ dữ liệu tương lai">
           <div className="protocol-list">
             <MetricPill label="Bài toán" value="Hồi quy chuỗi thời gian" />
-            <MetricPill label="Target" value="PM2.5 tại đúng t + 24 giờ" />
+            <MetricPill label="Target" value="PM2.5 tại t+1 đến t+24" />
             <MetricPill label="Chia tập" value={protocol.split ?? "Chronological 70/15/15"} />
             <MetricPill label="Tiêu chí chọn" value={protocol.selection_metric ?? "Validation RMSE"} />
           </div>
@@ -576,7 +605,7 @@ function DataLab({ model, cities, embedded = false }) {
 
       <div className="kpi-grid">
         <KpiCard label="Số bản ghi" value={fmt(data.rows, 0)} suffix="theo giờ" icon={Database} tone="mint" />
-        <KpiCard label="Mẫu có target 24h" value={fmt(data.supervised_rows_24h, 0)} suffix="mẫu" icon={Layers3} tone="blue" />
+        <KpiCard label="Mẫu đa horizon" value={fmt(data.supervised_rows_24h, 0)} suffix="mỗi horizon" icon={Layers3} tone="blue" />
         <KpiCard label="Thành phố" value={data.cities?.length ?? cities.length} suffix="điểm đại diện" icon={MapPin} tone="green" />
         <KpiCard label="Thiếu toàn bảng" value={`${fmt((data.missing_rate ?? 0) * 100, 3)}%`} suffix="gồm lag đầu chuỗi" icon={Activity} tone="yellow" />
       </div>
@@ -599,7 +628,7 @@ function DataLab({ model, cities, embedded = false }) {
             <strong>{fmtDate(data.start_time)}</strong>
             <span>đến</span>
             <strong>{fmtDate(data.end_time)}</strong>
-            <p>Target được nối bằng đúng timestamp sau 24 giờ; không giả định 24 dòng luôn tương đương 24 giờ.</p>
+            <p>Mỗi target được nối bằng đúng timestamp tương ứng từ t+1 đến t+24; không giả định số dòng luôn tương đương số giờ.</p>
           </div>
         </Panel>
       </div>
@@ -625,7 +654,7 @@ function DataLab({ model, cities, embedded = false }) {
           <div className="metric-strip vertical">
             <MetricPill label="Trùng city + datetime" value={fmt(quality.duplicate_city_time_rows ?? 0, 0)} />
             <MetricPill label="Khoảng trống theo giờ" value={fmt(quality.non_hourly_gaps ?? 0, 0)} />
-            <MetricPill label="Target khớp đúng 24h" value={`${fmt((quality.target_coverage ?? 0) * 100, 2)}%`} />
+            <MetricPill label="Target khớp timestamp" value={`${fmt((quality.target_coverage ?? 0) * 100, 2)}%`} />
             <MetricPill label="Trạng thái" value={quality.passed ? "Đạt" : "Không đạt"} />
           </div>
         </Panel>
@@ -679,7 +708,7 @@ function ModelComparisonTable({ rows, selectedModel }) {
               <td>{fmt(row.test_rmse_ug_m3, 2)}</td>
               <td>{fmt(row.test_mae_ug_m3, 2)}</td>
               <td>{fmt(row.test_r2, 3)}</td>
-              <td>{fmt(row.val_generalization_gap_pct, 1)}%</td>
+              <td>{row.val_generalization_gap_pct == null ? "N/A" : `${fmt(row.val_generalization_gap_pct, 1)}%`}</td>
               <td><span className={row.model === selectedModel ? "selected-chip" : "candidate-chip"}>{row.model === selectedModel ? "Được chọn" : "Đối chứng"}</span></td>
             </tr>
           ))}
@@ -915,7 +944,7 @@ function DashboardHome({
           }}
         >
           <Sparkles size={17} />
-          Xem dự báo sau 24 giờ
+          Xem dự báo theo giờ
         </button>
       </header>
 
@@ -1223,6 +1252,7 @@ function ActivityPlanner({ city, currentPm25, prediction }) {
     try {
       const result = await postJson("/api/activity-plan", {
         city,
+        horizon_hours: Number(prediction.horizon ?? 24),
         current_pm25: Number(currentPm25),
         forecast_pm25: Number(prediction.prediction_pm25),
         forecast_lower: Number(prediction.interval.lower),
@@ -1299,6 +1329,7 @@ function ActivityPlanner({ city, currentPm25, prediction }) {
 function ActivityPlanResult({ plan }) {
   const now = plan.options.now;
   const future = plan.options.after_24h;
+  const horizon = Number(plan.horizon_hours ?? 24);
   return (
     <div className="planner-result">
       <div className="planner-result-head">
@@ -1317,7 +1348,7 @@ function ActivityPlanResult({ plan }) {
           <em>Tải tương đối {fmt(now.relative_exposure_load, 1)}</em>
         </div>
         <div className={plan.timing === "after_24h" ? "preferred" : ""}>
-          <span>Sau 24 giờ</span>
+          <span>Sau {horizon} giờ</span>
           <strong>{fmt(future.pm25, 1)} <small>µg/m³</small></strong>
           <p>{future.category.label_vi}</p>
           <em>Tải {fmt(future.relative_exposure_load_lower, 1)} - {fmt(future.relative_exposure_load_upper, 1)}</em>
@@ -1352,6 +1383,9 @@ function ForecastStudio({
   selectedProfile,
   selectedHistory,
   selectedPrediction,
+  selectedHorizon,
+  horizonLoading,
+  onHorizonChange,
   forecastMode,
   setForecastMode,
 }) {
@@ -1364,7 +1398,7 @@ function ForecastStudio({
     setManualInput(manualValuesFromProfile(selectedProfile));
     setManualResult(null);
     setManualError("");
-  }, [selectedProfile?.city]);
+  }, [selectedProfile?.city, selectedHorizon]);
 
   const currentValue = Number(selectedProfile?.pm25 ?? 0);
   const automaticValue = Number(selectedPrediction?.prediction_pm25 ?? currentValue);
@@ -1411,7 +1445,10 @@ function ForecastStudio({
     setManualLoading(true);
     setManualError("");
     try {
-      const result = await postJson("/api/predict", profilePayload(selectedProfile, manualInput));
+      const result = await postJson("/api/predict", {
+        ...profilePayload(selectedProfile, manualInput),
+        horizon: selectedHorizon,
+      });
       setManualResult(result);
     } catch (error) {
       console.error(error);
@@ -1425,14 +1462,28 @@ function ForecastStudio({
     <section className="screen forecast-studio">
       <div className="screen-head forecast-studio-head">
         <div>
-          <p className="eyebrow">XGBoost · dự báo PM2.5 tại đúng t + 24 giờ</p>
+          <p className="eyebrow">XGBoost · dự báo PM2.5 trực tiếp từ t+1 đến t+24</p>
           <h1>Trung tâm dự báo</h1>
           <p className="screen-copy">
             Chọn bản tin tự động từ dữ liệu mới nhất hoặc nhập thông số để tạo một kịch bản riêng.
             Cả hai chế độ dùng cùng model đã được chọn bằng Validation RMSE.
           </p>
         </div>
-        <div className="forecast-mode-switch" role="tablist" aria-label="Chọn cách dự báo">
+        <div className="forecast-head-controls">
+          <label className="horizon-selector">
+            <span>Giờ cần dự báo</span>
+            <select
+              aria-label="Chọn số giờ dự báo"
+              value={selectedHorizon}
+              disabled={horizonLoading}
+              onChange={(event) => onHorizonChange(Number(event.target.value))}
+            >
+              {Array.from({ length: 24 }, (_, index) => index + 1).map((hour) => (
+                <option key={hour} value={hour}>t+{hour} giờ</option>
+              ))}
+            </select>
+          </label>
+          <div className="forecast-mode-switch" role="tablist" aria-label="Chọn cách dự báo">
           <button
             type="button"
             role="tab"
@@ -1455,6 +1506,7 @@ function ForecastStudio({
             <span>Nhập thông số</span>
             <small>Tạo kịch bản riêng</small>
           </button>
+          </div>
         </div>
       </div>
 
@@ -1484,7 +1536,7 @@ function ForecastStudio({
                   <small>µg/m³</small>
                 </div>
                 <div className="weather-arrow">
-                  <b>24h</b>
+                  <b>{selectedHorizon}h</b>
                   <i>→</i>
                 </div>
                 <div>
@@ -1541,7 +1593,7 @@ function ForecastStudio({
                 rows={selectedHistory}
                 prediction={selectedPrediction}
                 metric="pm25"
-                forecastLabel="t + 24h"
+                forecastLabel={`t + ${selectedHorizon}h`}
                 tall
               />
             </Panel>
@@ -1629,7 +1681,7 @@ function ForecastStudio({
               disabled={manualLoading}
             >
               <Sparkles size={18} />
-              {manualLoading ? "Đang chạy model..." : "Dự đoán PM2.5 sau 24 giờ"}
+              {manualLoading ? "Đang chạy model..." : `Dự đoán PM2.5 sau ${selectedHorizon} giờ`}
             </button>
           </section>
 
@@ -1639,7 +1691,7 @@ function ForecastStudio({
                 <SlidersHorizontal size={34} />
                 <h2>Nhập thông số rồi chạy dự đoán</h2>
                 <p>
-                  Kết quả sẽ hiển thị nồng độ PM2.5 tại t + 24 giờ, khoảng dự báo,
+                  Kết quả sẽ hiển thị nồng độ PM2.5 tại t + {selectedHorizon} giờ, khoảng dự báo,
                   mức sức khỏe và chênh lệch với bản tin tự động.
                 </p>
               </div>
@@ -1648,7 +1700,7 @@ function ForecastStudio({
                 <div className="manual-result-head" style={{ "--tone": manualCategory.color }}>
                   <span>Kết quả kịch bản · {selectedCity}</span>
                   <strong>{fmt(manualValue, 1)}</strong>
-                  <small>µg/m³ PM2.5 tại t + 24 giờ</small>
+                  <small>µg/m³ PM2.5 tại t + {selectedHorizon} giờ</small>
                   <b>{manualCategory.label}</b>
                   <p>{manualCategory.text}</p>
                 </div>
