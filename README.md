@@ -100,12 +100,10 @@ data/
   processed/      dữ liệu hợp nhất, làm sạch và runtime
 figures/          hình đánh giá mô hình
 model/            preprocessing đa target, 3 model, chọn model và saved artifact
-model_t24/        phiên bản đối chiếu dự báo riêng t+24
 web/
   backend/        FastAPI và inference service
   frontend/       React/Vite desktop webapp
   Dockerfile      image triển khai cloud
-web_t24/          ứng dụng t+24 cũ để tái lập report đối chiếu
 main.py           crawler Open-Meteo
 requirements*.txt dependency local và phát triển
 render.yaml       Render Blueprint dùng web/Dockerfile
